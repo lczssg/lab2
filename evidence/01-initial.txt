@@ -1,0 +1,44 @@
+*** Error setting resource limits. Mininet's performance may be affected.
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-arptables = 1 
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-iptables = 1 
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-ip6tables = 1 
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 1 switches
+s1 
+*** Starting CLI:
+h1 h1-eth0:s1-eth1
+h2 h2-eth0:s1-eth2
+h3 h3-eth0:s1-eth3
+s1 lo:  s1-eth1:h1-eth0 s1-eth2:h2-eth0 s1-eth3:h3-eth0
+<Host h1: h1-eth0:10.1.0.1 pid=32> 
+<Host h2: h2-eth0:10.1.0.2 pid=34> 
+<Host h3: h3-eth0:10.1.0.3 pid=36> 
+<LinuxBridge s1: lo:127.0.0.1,s1-eth1:None,s1-eth2:None,s1-eth3:None pid=27> 
+*** Ping: testing ping reachability
+h1 -> h2 h3 
+h2 -> h1 h3 
+h3 -> h1 h2 
+*** Results: 0% dropped (6/6 received)
+PING fd00:6101::2 (fd00:6101::2) 56 data bytes
+64 bytes from fd00:6101::2: icmp_seq=1 ttl=64 time=0.189 ms
+64 bytes from fd00:6101::2: icmp_seq=2 ttl=64 time=0.065 ms
+
+--- fd00:6101::2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1073ms
+rtt min/avg/max/mdev = 0.065/0.127/0.189/0.062 ms
+10.1.0.2 dev h1-eth0 lladdr 00:00:00:00:00:02 REACHABLE 
+10.1.0.3 dev h1-eth0 lladdr 00:00:00:00:00:03 REACHABLE 
+fd00:6101::2 dev h1-eth0 lladdr 00:00:00:00:00:02 REACHABLE 
+*** Stopping 0 controllers
+
+*** Stopping 3 links
+...
+*** Stopping 1 switches
+s1 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done
+mininet> mininet> mininet> mininet> mininet> mininet> mininet> 

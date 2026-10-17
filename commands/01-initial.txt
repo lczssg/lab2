@@ -1,0 +1,7 @@
+sh sleep 3
+net
+dump
+pingall
+h1 ping -6 -c 2 fd00:6101::2
+h1 ip neigh
+exit
