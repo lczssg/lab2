@@ -1,0 +1,37 @@
+# page.yaml: the words on your page, kept as data like everything else.
+# make_page.py puts each answer under its question. A few sentences each, in your own words;
+# leave a blank line between paragraphs. Refer to YOUR network and YOUR evidence.
+# Never put your name or full student ID here: the page is public.
+
+repository: https://github.com/lczssg/lab2
+
+answers:
+  planes:
+    question: "Where are the data, control and management planes in your network?"
+    answer: >-
+      My design is a branching tree of four switches and six dual-stack hosts. The data plane is the Linux bridges forwarding Ethernet frames using their MAC tables. There is no external SDN controller or routing protocol in this lab; the fixed links and local bridge learning provide connectivity inside one subnet. The YAML file, build script and Mininet CLI provide the management operations that create, inspect and change this network.
+  learning:
+    question: "How did your switches learn which port leads to each host? Use your MAC table evidence."
+    answer: >-
+      A bridge learns from the source MAC address of a frame arriving on a port, then uses the destination MAC to choose where to forward later frames. In my s1 MAC table, host 01 is on port 1, hosts 02 and 03 are on port 2 towards s2, and hosts 04, 05 and 06 are on port 3 towards s3. This explains why several remote hosts share one learned port. Entries marked 'yes' are local bridge interface addresses, so I do not count them as learned hosts; background IPv6 traffic can also teach a bridge before a manual ping.
+  kind:
+    question: "Which of the four kinds of programmability is this assignment (a network described as data, then built and documented by scripts)? Why isn't it any of the other three?"
+    answer: >-
+      This is configuration automation: scripts turn a structured description into a network and its documentation. I am not writing a new packet-processing program as with P4, and I am not using an external controller to install forwarding decisions through OpenFlow. The scripts call Mininet locally rather than configuring devices through a structured network-management interface such as NETCONF.
+  two_am:
+    question: "Week 1's 2 a.m. change on 40 switches: what would be different if those switches were described like your network?"
+    answer: >-
+      Instead of typing the same change on 40 switches, I could update the shared data, inspect the Git diff and validate it before applying the change. In this lab, one topology file supplies both the running network and the published host table, links and diagram, which helps keep them consistent. A wrong shared change could still affect every device, so a real rollout would need staged deployment and a tested rollback; passing these small checks alone would not make it safe.
+  model:
+    question: "What's the difference between your network's data model and its serialisation? Use YAML and JSON as the example."
+    answer: >-
+      My data model contains student_id_last4, a list of switches, hosts with IPv4 and IPv6 addresses, and pairs of linked nodes. YAML and JSON are two ways of serialising that same structure: their parsed Python dictionaries and lists compare equal, and both built my working network. The YAML comments disappeared in JSON because comments are not part of this model. Changing punctuation or whitespace between the formats did not change which hosts and links existed.
+  check:
+    question: "Why is it better to catch bad data in check() than with pingall? What did IPv6 notice about a duplicate address that IPv4 didn't?"
+    answer: >-
+      In my four-host fault experiment, duplicate addresses still gave 11/12 IPv4 replies, so a nearly successful pingall did not prove the data was correct or that the intended host replied. IPv6 marked h4's duplicate fd00:6101::2 as dadfailed, while the later injection into h2 also showed IPv4 accepting the duplicate 10.1.0.1 as a secondary address. My check() normalises addresses and detects duplicate IPv4 and IPv6 values as well as unknown link endpoints before building; bad.yaml produced all three expected PROBLEM messages. These checks prevent those particular mistakes, but do not replace connectivity tests: pingall only checks IPv4, so I also tested all 30 directed IPv6 host pairs.
+  git:
+    question: "What does your Git history give you that copying files into folders named topology-v2-final wouldn't?"
+    answer: >-
+      My commits show the initial three-host network, its expansion, the JSON comparison, the duplicate-address experiment and the validation fix as separate changes. git diff shows exactly which lines changed, while the history records the order and purpose and lets me recover an earlier version. For example, the duplicate experiment is preserved before the checker was implemented, so the original failure can be reproduced from that commit instead of guessing which 'final' folder contains it.
+

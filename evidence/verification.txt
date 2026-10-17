@@ -1,0 +1,2 @@
+PASS: personal dual-stack tree, YAML/JSON equality, normalised duplicate checks,
+bad-link rejection, escaped link HTML, generated diagram, evidence and seven answers.

@@ -1,0 +1,4 @@
+PROBLEM: h2 and h1 both use 10.1.0.1
+PROBLEM: h2 and h1 both use fd00:6101::1
+PROBLEM: link h6 -- s9 refers to unknown node s9
+Fix the description first: a broken network doesn't get published.
