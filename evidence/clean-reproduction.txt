@@ -1,0 +1,53 @@
+*** Error setting resource limits. Mininet's performance may be affected.
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-arptables = 1 
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-iptables = 1 
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-ip6tables = 1 
+*** Configuring hosts
+h1 h2 h3 h4 h5 h6 
+*** Starting controller
+
+*** Starting 4 switches
+s1 s2 s3 s4 
+*** Starting CLI:
+h1 h1-eth0:s1-eth1
+h2 h2-eth0:s2-eth1
+h3 h3-eth0:s2-eth2
+h4 h4-eth0:s3-eth1
+h5 h5-eth0:s3-eth2
+h6 h6-eth0:s4-eth1
+s1 lo:  s1-eth1:h1-eth0 s1-eth2:s2-eth3 s1-eth3:s3-eth3
+s2 lo:  s2-eth1:h2-eth0 s2-eth2:h3-eth0 s2-eth3:s1-eth2
+s3 lo:  s3-eth1:h4-eth0 s3-eth2:h5-eth0 s3-eth3:s1-eth3 s3-eth4:s4-eth2
+s4 lo:  s4-eth1:h6-eth0 s4-eth2:s3-eth4
+*** Ping: testing ping reachability
+h1 -> h2 h3 h4 h5 h6 
+h2 -> h1 h3 h4 h5 h6 
+h3 -> h1 h2 h4 h5 h6 
+h4 -> h1 h2 h3 h5 h6 
+h5 -> h1 h2 h3 h4 h6 
+h6 -> h1 h2 h3 h4 h5 
+*** Results: 0% dropped (30/30 received)
+PING fd00:6101::6 (fd00:6101::6) 56 data bytes
+64 bytes from fd00:6101::6: icmp_seq=1 ttl=64 time=0.218 ms
+
+--- fd00:6101::6 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.218/0.218/0.218/0.000 ms
+2: h2-eth0@if87: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000 link-netnsid 0
+    inet6 fd00:6101::2/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::200:ff:fe00:2/64 scope link 
+       valid_lft forever preferred_lft forever
+2: h2-eth0@if87: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000 link-netnsid 0
+    inet 10.1.0.2/24 brd 10.1.0.255 scope global h2-eth0
+       valid_lft forever preferred_lft forever
+*** Stopping 0 controllers
+
+*** Stopping 9 links
+.........
+*** Stopping 4 switches
+s1 s2 s3 s4 
+*** Stopping 6 hosts
+h1 h2 h3 h4 h5 h6 
+*** Done
+mininet> mininet> mininet> mininet> mininet> mininet> mininet> 

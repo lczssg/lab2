@@ -1,0 +1,9 @@
+Lab 2 verified on 2026-10-17 with actual Mininet runs.
+Linux Docker Engine: 29.6.2
+Course image: firdaussahran/netlab-mininet@sha256:61e473c216738b60a74196ac741b915a40bca86fa0aa2e16e7d753569d1b83b6
+Isolation: --network none; NET_ADMIN and SYS_ADMIN; no privileged mode; only the lab2 checkout mounted; no published ports.
+Clean remote checkout: network rebuilt successfully (IPv4 30/30, IPv6 h1 to h6); page regeneration and regression checks passed.
+Temporary lab container stopped and automatically removed after verification.
+Original container IDs, state/timestamps, mounts, network attachments and restart policies: IDENTICAL.
+Original volume and Docker network inventories: IDENTICAL.
+Private protection snapshots remain under ignored .local and are not published.
