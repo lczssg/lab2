@@ -1,0 +1,6 @@
+sh sleep 3
+net
+pingall
+h1 ping -6 -c 1 fd00:6101::4
+exit
+
