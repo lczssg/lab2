@@ -1,0 +1,4 @@
+Fix the description and try again.
+PROBLEM: h2 and h1 both use 10.1.0.1
+PROBLEM: h2 and h1 both use fd00:6101::1
+PROBLEM: link h6 -- s9 refers to unknown node s9

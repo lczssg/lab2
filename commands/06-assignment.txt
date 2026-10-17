@@ -1,0 +1,19 @@
+sh sleep 3
+net
+dump
+pingall
+h1 ping -6 -c 1 fd00:6101::2
+h6 ping -6 -c 1 fd00:6101::3
+py (lambda hosts: print("\n".join(f"{a.name} -> {b.name}: " + a.cmd("ping -6 -c 1 -W 2 fd00:6101::" + b.name[1:]).splitlines()[-2] for a in hosts for b in hosts if a != b)))(net.hosts)
+h1 ip neigh > evidence/neigh.txt
+sh brctl showmacs s1 > evidence/macs.txt
+sh for sw in s1 s2 s3 s4; do echo "$sw"; brctl showmacs "$sw"; done > evidence/all-macs.txt
+h2 ip -6 addr add fd00:6101::1/64 dev h2-eth0
+h2 ip addr add 10.1.0.1/24 dev h2-eth0
+sh sleep 3
+h2 ip -6 addr show dev h2-eth0 > evidence/dad.txt
+h2 ip -4 addr show dev h2-eth0 >> evidence/dad.txt
+h2 ip -6 addr show dev h2-eth0
+h2 ip -4 addr show dev h2-eth0
+exit
+
