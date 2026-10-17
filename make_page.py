@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Week 2 assignment: generate your network's web page from the same data that builds it.
 
-Run it inside the lab container, from your netlab folder:
+Run it inside the lab container, from your lab2 folder:
     python3 make_page.py topology.yaml
 
 It reads your topology file, checks it with the same checks build_topo.py uses (so a broken
@@ -185,4 +185,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

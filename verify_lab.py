@@ -5,6 +5,7 @@ Run in the course container: python3 verify_lab.py
 from copy import deepcopy
 import ipaddress
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -56,11 +57,17 @@ for _, path, _ in EVIDENCE:
     assert Path(path).read_text().strip(), path
 assert "0% dropped (30/30 received)" in Path("evidence/pingall.txt").read_text()
 assert "dadfailed" in Path("evidence/dad.txt").read_text()
-assert len(Path("evidence/ipv6-all-pairs.txt").read_text().splitlines()) == 30
+session = Path("evidence/final-session.txt").read_text()
+assert Path("evidence/pingall.txt").read_text().strip() in session
+ipv6 = Path("evidence/ipv6-all-pairs.txt").read_text().splitlines()
+assert len(ipv6) == len(set(ipv6)) == 30
+assert all(line in session for line in ipv6)
 page = yaml.safe_load(Path("page.yaml").read_text())
 assert set(page["answers"]) == {"planes", "learning", "kind", "two_am", "model", "check", "git"}
 assert all(str(item["answer"]).strip() for item in page["answers"].values())
 html = Path("docs/index.html").read_text()
+embedded = re.search(r'<script type="application/json" id="topology-data">(.*?)</script>', html, re.S)
+assert embedded and json.loads(embedded.group(1)) == spec
 assert esc(diagram) in html
 assert links_section(spec) in html
 assert all(text not in html for text in ("TODO", "Missing:", "(Not answered yet.)", "YOUR-"))
