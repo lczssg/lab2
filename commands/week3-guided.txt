@@ -1,0 +1,42 @@
+h1 ping -n -c 2 -W 1 10.1.1.1
+h1 ping -n -c 2 -W 1 10.1.32.10
+r1 ip route > week3/r1-routes-before.txt
+r1 sysctl net.ipv4.ip_forward
+r1 sysctl -w net.ipv4.ip_forward=1
+r2 sysctl -w net.ipv4.ip_forward=1
+r3 sysctl -w net.ipv4.ip_forward=1
+h1 ping -n -c 2 -W 1 10.1.32.10
+r1 ip route add 10.1.32.0/24 via 10.1.12.2
+r1 ip route add 10.1.32.0/20 via 10.1.13.2
+r3 ip route add 10.1.32.0/20 via 10.1.23.2
+r3 ip route add 10.1.1.0/24 via 10.1.13.1
+r2 ip route add 10.1.1.0/24 via 10.1.12.1
+h1 ping -n -c 2 -W 1 10.1.32.10
+h1 ping -n -c 2 -W 1 10.1.33.10
+r1 ip route get 10.1.32.10 > week3/lpm.txt
+r1 ip route get 10.1.33.10 >> week3/lpm.txt
+r1 ip route get 10.1.40.1 >> week3/lpm.txt
+h1 traceroute -n -I -m 6 -w 1 -q 1 10.1.32.10 > week3/trace-h2.txt
+h1 traceroute -n -I -m 6 -w 1 -q 1 10.1.33.10 > week3/trace-h3.txt
+r1 ip route del 10.1.32.0/24
+h1 traceroute -n -I -m 6 -w 1 -q 1 10.1.32.10 > week3/trace-h2-fallback.txt
+r3 ip route del 10.1.32.0/20
+h1 traceroute -n -I -m 6 -w 1 -q 1 10.1.32.10 > week3/trace-h2-unreachable.txt
+r3 ip route add 10.1.32.0/20 via 10.1.13.1
+h1 ping -n -c 2 -W 1 10.1.32.10
+h1 traceroute -n -I -m 8 -w 1 -q 1 10.1.32.10 > week3/trace-loop.txt
+r1 sysctl -w net.ipv6.conf.all.forwarding=1
+r2 sysctl -w net.ipv6.conf.all.forwarding=1
+r3 sysctl -w net.ipv6.conf.all.forwarding=1
+r1 ip -6 route add fd00:6101:32::/64 via fd00:6101:12::2
+r1 ip -6 route add fd00:6101:30::/44 via fd00:6101:13::2
+r3 ip -6 route add fd00:6101:30::/44 via fd00:6101:23::2
+r3 ip -6 route add fd00:6101:1::/64 via fd00:6101:13::1
+r2 ip -6 route add fd00:6101:1::/64 via fd00:6101:12::1
+h1 ping -6 -n -c 3 -W 2 fd00:6101:32::10 > week3/ping-ipv6.txt
+h1 ping -6 -n -c 3 -W 2 fd00:6101:33::10 >> week3/ping-ipv6.txt
+r1 ip -6 route get fd00:6101:32::10 > week3/lpm-ipv6.txt
+r1 ip -6 route get fd00:6101:33::10 >> week3/lpm-ipv6.txt
+r1 ip -6 route get fd00:6101:3f::1 >> week3/lpm-ipv6.txt
+h1 traceroute -6 -n -I -m 6 -w 1 -q 1 fd00:6101:33::10 > week3/trace-h3-ipv6.txt
+exit

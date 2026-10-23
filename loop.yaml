@@ -1,0 +1,34 @@
+# Deliberate loop: r3 -> r4 -> r3 for h1.
+# Four-router ring. LAN gateways are .1, hosts .10; link endpoints are .1 then .2.
+student_id_last4: "6101"
+routers: [r1, r2, r3, r4]
+
+lans:
+  - {name: lan-h1, network: 10.1.8.0/24, router: r1, host: h1}
+  - {name: lan-h2, network: 10.1.48.0/24, router: r2, host: h2}
+  - {name: lan-h3, network: 10.1.50.0/24, router: r3, host: h3}
+  - {name: lan-h4, network: 10.1.80.0/24, router: r4, host: h4}
+
+links:
+  - [r1, r2, 10.1.12.0/30]
+  - [r2, r3, 10.1.23.0/30]
+  - [r3, r4, 10.1.34.0/30]
+  - [r1, r4, 10.1.14.0/30]
+
+routes:
+  r1:
+    - {to: 10.1.48.0/22, via: 10.1.12.2}  # h2 and h3, except the /24 below
+    - {to: 10.1.50.0/24, via: 10.1.14.2}  # longer prefix sends h3 via r4
+    - {to: 10.1.80.0/24, via: 10.1.14.2}
+  r2:
+    - {to: 10.1.8.0/24, via: 10.1.12.1}
+    - {to: 10.1.50.0/24, via: 10.1.23.2}
+    - {to: 10.1.80.0/24, via: 10.1.23.2}
+  r3:
+    - {to: 10.1.8.0/24, via: 10.1.34.2}
+    - {to: 10.1.48.0/24, via: 10.1.23.1}
+    - {to: 10.1.80.0/24, via: 10.1.34.2}
+  r4:
+    - {to: 10.1.8.0/24, via: 10.1.34.1}
+    - {to: 10.1.48.0/22, via: 10.1.34.1}  # both h2 and h3 use this summary
+
