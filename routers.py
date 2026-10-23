@@ -200,6 +200,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Week 3: three Linux routers on your own addresses.")
     ap.add_argument("--id", required=True, metavar="NNNN", help="the last 4 digits of your student ID")
     ap.add_argument("--routes", metavar="FILE", help="Step 10: configure the routers from this routes file")
+    ap.add_argument("--commands", metavar="FILE", help="run a Mininet CLI command file instead of an interactive prompt")
     args = ap.parse_args()
     nnnn = args.id
     if len(nnnn) != 4 or not nnnn.isdigit():
@@ -225,6 +226,8 @@ if __name__ == "__main__":
         print(f"Applying {args.routes}:")
         apply_routes(net, routes)
         print()
-    CLI(net)
-    net.stop()
+    try:
+        CLI(net, script=args.commands)
+    finally:
+        net.stop()
 

@@ -11,6 +11,7 @@ network in Mininet, switch forwarding on and apply your routes, printing each co
 Each LAN has one router and one host: the router is .1 on the LAN and the host is .10.
 On each router-to-router link, the first router named is .1 and the second is .2.
 """
+import argparse
 import ipaddress
 import json
 import sys
@@ -204,9 +205,11 @@ def build(spec):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit("usage: python3 build_routed.py <network.yaml>")
-    spec = load(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("network", help="network YAML or JSON file")
+    parser.add_argument("--commands", help="run a Mininet CLI command file instead of an interactive prompt")
+    args = parser.parse_args()
+    spec = load(args.network)
     problems = check_spec(spec)
     if not problems:
         problems = check_paths(spec)
@@ -218,6 +221,8 @@ if __name__ == "__main__":
     setLogLevel("info")
     net = build(spec)
     print("\nHosts:", ", ".join(f"{h} {a} (via {r})" for h, (a, r) in hosts(spec).items()), "\n")
-    CLI(net)
-    net.stop()
+    try:
+        CLI(net, script=args.commands)
+    finally:
+        net.stop()
 
