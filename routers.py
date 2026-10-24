@@ -230,4 +230,3 @@ if __name__ == "__main__":
         CLI(net, script=args.commands)
     finally:
         net.stop()
-

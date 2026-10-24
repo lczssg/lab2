@@ -30,4 +30,3 @@ routes:
   r4:
     - {to: 10.1.8.0/24, via: 10.1.14.1}
     - {to: 10.1.48.0/22, via: 10.1.34.1}  # both h2 and h3 use this summary
-
