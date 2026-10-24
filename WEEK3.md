@@ -17,6 +17,14 @@ Each router has one `/24` LAN. The router is `.1`, the host is `.10`, and inter-
 
 Start in the mounted repository directory, with Mininet and PyYAML installed. Building requires the container capabilities needed by Mininet. Reuse the existing isolated course setup and do not run global Docker cleanup.
 
+From Windows PowerShell in the checked-out repository, start the course container:
+
+```powershell
+docker run -it --rm --network none --cap-add NET_ADMIN --cap-add SYS_ADMIN --mount "type=bind,source=$($PWD.Path),target=/lab" -w /lab firdaussahran/netlab-mininet:1.0
+```
+
+Then `sh commands/run-week3.sh` recollects the evidence, and `python3 make_page3.py network.yaml` followed by `python3 verify_week3.py` generates and verifies the page. Recollecting replaces the evidence files. For manual guided work, first run `mount -o remount,rw /proc/sys` inside this disposable container, then `python3 routers.py --id 6101`; the assignment's interactive command is below.
+
 ```sh
 # These should reject the description and exit nonzero before Mininet builds.
 python3 build_routed.py loop.yaml
@@ -83,7 +91,7 @@ Actual container run: 2026-10-24 (Asia/Shanghai). All 12 directed LAN-host pairs
 - [x] All four answers match the final design and observed results; no pending text remains.
 - [x] The generated page shows every router's connected/static entries, longest prefix first, and no missing evidence warnings.
 - [x] Commit actual work stages without rewriting history to manufacture progress.
-- [ ] Publish at `https://lczssg.github.io/lab2/week3/` and check both this page and the existing Week 2 homepage.
+- [x] Publish at `https://lczssg.github.io/lab2/week3/` and check both this page and the existing Week 2 homepage (verified 2026-10-24).
 - [ ] Submit the Week 3 link to the SPeCTRUM online-text assignment before its displayed deadline; verify the saved submission state.
 
 Preparing files or generating a local page does not itself publish the page or submit the assignment. Check off items only after their actual execution and verification.
