@@ -1,6 +1,9 @@
 #!/bin/sh
 # Run inside the isolated course container from /lab. Existing evidence is replaced.
 set -eu
+# Docker masks /proc/sys read-only by default. This mount is inside this disposable
+# container's mount namespace; NET_ADMIN/SYS_ADMIN are scoped to that container.
+mount -o remount,rw /proc/sys
 mkdir -p evidence3 week3
 python3 test_week3.py > evidence3/model-check.txt 2>&1
 if python3 build_routed.py loop.yaml > evidence3/check.txt 2>&1; then

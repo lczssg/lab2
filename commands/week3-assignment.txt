@@ -29,10 +29,21 @@ h1 traceroute -n -I -m 5 -w 1 -q 1 h3 >> evidence3/failure.txt
 sh echo "== r1 decision with link down" >> evidence3/failure.txt
 r1 ip route get 10.1.50.10 >> evidence3/failure.txt 2>&1
 r1 ip route >> evidence3/failure.txt
+sh echo "== r4 routes with link down" >> evidence3/failure.txt
+r4 ip route >> evidence3/failure.txt
 link r1 r4 up
-sh echo "== r1-r4 restored: h1 -> h3" >> evidence3/failure.txt
+sh echo "== link up alone: static routes are not reinstalled" >> evidence3/failure.txt
+h1 ping -n -c 1 -W 1 h3 >> evidence3/failure.txt
+r4 ip route get 10.1.8.10 >> evidence3/failure.txt 2>&1
+r1 ip route replace 10.1.50.0/24 via 10.1.14.2
+r1 ip route replace 10.1.80.0/24 via 10.1.14.2
+r4 ip route replace 10.1.8.0/24 via 10.1.14.1
+sh echo "== static routes reinstalled: h1 -> h3" >> evidence3/failure.txt
 h1 ping -n -c 3 -W 2 h3 >> evidence3/failure.txt
 h1 traceroute -n -I -m 5 -w 1 -q 1 h3 >> evidence3/failure.txt
+sh echo "== recovered r1 and r4 routes" >> evidence3/failure.txt
+r1 ip route >> evidence3/failure.txt
+r4 ip route >> evidence3/failure.txt
 sh echo "== /24 before deletion" > evidence3/lpm-fallback.txt
 r1 ip route get 10.1.50.10 >> evidence3/lpm-fallback.txt
 r1 ip route del 10.1.50.0/24
