@@ -1,0 +1,57 @@
+*** Error setting resource limits. Mininet's performance may be affected.
+*** Configuring hosts
+r1 r2 r3 h1 h2 h3 
+*** Starting controller
+
+*** Starting 0 switches
+
+*** Starting CLI:
+PING 10.1.32.10 (10.1.32.10) 56(84) bytes of data.
+64 bytes from 10.1.32.10: icmp_seq=1 ttl=62 time=0.085 ms
+64 bytes from 10.1.32.10: icmp_seq=2 ttl=62 time=0.099 ms
+
+--- 10.1.32.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1014ms
+rtt min/avg/max/mdev = 0.085/0.092/0.099/0.007 ms
+PING 10.1.33.10 (10.1.33.10) 56(84) bytes of data.
+64 bytes from 10.1.33.10: icmp_seq=1 ttl=62 time=0.185 ms
+64 bytes from 10.1.33.10: icmp_seq=2 ttl=62 time=0.072 ms
+
+--- 10.1.33.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1000ms
+rtt min/avg/max/mdev = 0.072/0.128/0.185/0.056 ms
+PING 10.1.33.10 (10.1.33.10) 56(84) bytes of data.
+64 bytes from 10.1.33.10: icmp_seq=1 ttl=63 time=0.051 ms
+64 bytes from 10.1.33.10: icmp_seq=2 ttl=63 time=0.072 ms
+
+--- 10.1.33.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1016ms
+rtt min/avg/max/mdev = 0.051/0.061/0.072/0.010 ms
+*** Stopping 0 controllers
+
+*** Stopping 6 links
+......
+*** Stopping 0 switches
+
+*** Stopping 6 hosts
+r1 r2 r3 h1 h2 h3 
+*** Done
+
+Your networks (student ID ending 6101):
+  h1's LAN    10.1.1.0/24   fd00:6101:1::/64   h1 .10 / ::10, r1 .1 / ::1
+  r1-r2 link  10.1.12.0/30   fd00:6101:12::/64   r1 .1 / ::1, r2 .2 / ::2
+  r1-r3 link  10.1.13.0/30   fd00:6101:13::/64   r1 .1 / ::1, r3 .2 / ::2
+  r3-r2 link  10.1.23.0/30   fd00:6101:23::/64   r3 .1 / ::1, r2 .2 / ::2
+  h2's LAN    10.1.32.0/24   fd00:6101:32::/64   r2 .1 / ::1, h2 .10 / ::10
+  h3's LAN    10.1.33.0/24   fd00:6101:33::/64   r2 .1 / ::1, h3 .10 / ::10
+
+Applying routes.yaml:
+r1 sysctl -w net.ipv4.ip_forward=1
+r1 ip route add 10.1.32.0/24 via 10.1.12.2
+r1 ip route add 10.1.32.0/20 via 10.1.13.2
+r2 sysctl -w net.ipv4.ip_forward=1
+r2 ip route add 10.1.1.0/24 via 10.1.12.1
+r3 sysctl -w net.ipv4.ip_forward=1
+r3 ip route add 10.1.32.0/20 via 10.1.23.2
+r3 ip route add 10.1.1.0/24 via 10.1.13.1
+

@@ -1,0 +1,54 @@
+*** Error setting resource limits. Mininet's performance may be affected.
+*** Configuring hosts
+r1 r2 r3 r4 h1 h2 h3 h4 
+*** Starting controller
+
+*** Starting 0 switches
+
+*** Starting CLI:
+== topology
+r1 r1-eth0:h1-eth0 r1-eth1:r2-eth1 r1-eth2:r4-eth2
+r2 r2-eth0:h2-eth0 r2-eth1:r1-eth1 r2-eth2:r3-eth1
+r3 r3-eth0:h3-eth0 r3-eth1:r2-eth2 r3-eth2:r4-eth1
+r4 r4-eth0:h4-eth0 r4-eth1:r3-eth2 r4-eth2:r1-eth2
+h1 h1-eth0:r1-eth0
+h2 h2-eth0:r2-eth0
+h3 h3-eth0:r3-eth0
+h4 h4-eth0:r4-eth0
+== all 12 directed LAN-host pairs
+h1 -> h2 h3 h4 
+h2 -> h1 h3 h4 
+h3 -> h1 h2 h4 
+h4 -> h1 h2 h3 
+*** Results: 0% dropped (12/12 received)
+4016
+== final host-pair verification
+h1 -> h2 h3 h4 
+h2 -> h1 h3 h4 
+h3 -> h1 h2 h4 
+h4 -> h1 h2 h3 
+*** Results: 0% dropped (12/12 received)
+*** Stopping 0 controllers
+
+*** Stopping 8 links
+........
+*** Stopping 0 switches
+
+*** Stopping 8 hosts
+r1 r2 r3 r4 h1 h2 h3 h4 
+*** Done
+Applying routes:
+  r1 ip route add 10.1.48.0/22 via 10.1.12.2
+  r1 ip route add 10.1.50.0/24 via 10.1.14.2
+  r1 ip route add 10.1.80.0/24 via 10.1.14.2
+  r2 ip route add 10.1.8.0/24 via 10.1.12.1
+  r2 ip route add 10.1.50.0/24 via 10.1.23.2
+  r2 ip route add 10.1.80.0/24 via 10.1.23.2
+  r3 ip route add 10.1.8.0/24 via 10.1.34.2
+  r3 ip route add 10.1.48.0/24 via 10.1.23.1
+  r3 ip route add 10.1.80.0/24 via 10.1.34.2
+  r4 ip route add 10.1.8.0/24 via 10.1.14.1
+  r4 ip route add 10.1.48.0/22 via 10.1.34.1
+
+Hosts: h1 10.1.8.10 (via r1), h2 10.1.48.10 (via r2), h3 10.1.50.10 (via r3), h4 10.1.80.10 (via r4) 
+

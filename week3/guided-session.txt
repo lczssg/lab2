@@ -1,0 +1,74 @@
+*** Error setting resource limits. Mininet's performance may be affected.
+*** Configuring hosts
+r1 r2 r3 h1 h2 h3 
+*** Starting controller
+
+*** Starting 0 switches
+
+*** Starting CLI:
+PING 10.1.1.1 (10.1.1.1) 56(84) bytes of data.
+64 bytes from 10.1.1.1: icmp_seq=1 ttl=64 time=0.053 ms
+64 bytes from 10.1.1.1: icmp_seq=2 ttl=64 time=0.080 ms
+
+--- 10.1.1.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1031ms
+rtt min/avg/max/mdev = 0.053/0.066/0.080/0.013 ms
+PING 10.1.32.10 (10.1.32.10) 56(84) bytes of data.
+
+--- 10.1.32.10 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1035ms
+
+net.ipv4.ip_forward = 0
+net.ipv4.ip_forward = 1
+net.ipv4.ip_forward = 1
+net.ipv4.ip_forward = 1
+PING 10.1.32.10 (10.1.32.10) 56(84) bytes of data.
+From 10.1.1.1 icmp_seq=1 Destination Net Unreachable
+From 10.1.1.1 icmp_seq=2 Destination Net Unreachable
+
+--- 10.1.32.10 ping statistics ---
+2 packets transmitted, 0 received, +2 errors, 100% packet loss, time 1055ms
+
+PING 10.1.32.10 (10.1.32.10) 56(84) bytes of data.
+64 bytes from 10.1.32.10: icmp_seq=1 ttl=62 time=0.226 ms
+64 bytes from 10.1.32.10: icmp_seq=2 ttl=62 time=0.044 ms
+
+--- 10.1.32.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1021ms
+rtt min/avg/max/mdev = 0.044/0.135/0.226/0.091 ms
+PING 10.1.33.10 (10.1.33.10) 56(84) bytes of data.
+64 bytes from 10.1.33.10: icmp_seq=1 ttl=62 time=0.083 ms
+64 bytes from 10.1.33.10: icmp_seq=2 ttl=62 time=0.083 ms
+
+--- 10.1.33.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1036ms
+rtt min/avg/max/mdev = 0.083/0.083/0.083/0.000 ms
+PING 10.1.32.10 (10.1.32.10) 56(84) bytes of data.
+From 10.1.13.2 icmp_seq=1 Time to live exceeded
+From 10.1.13.2: icmp_seq=1 Redirect Host(New nexthop: 10.1.13.1)
+From 10.1.13.2 icmp_seq=2 Time to live exceeded
+
+--- 10.1.32.10 ping statistics ---
+2 packets transmitted, 0 received, +2 errors, 100% packet loss, time 1001ms
+
+net.ipv6.conf.all.forwarding = 1
+net.ipv6.conf.all.forwarding = 1
+net.ipv6.conf.all.forwarding = 1
+*** Stopping 0 controllers
+
+*** Stopping 6 links
+......
+*** Stopping 0 switches
+
+*** Stopping 6 hosts
+r1 r2 r3 h1 h2 h3 
+*** Done
+
+Your networks (student ID ending 6101):
+  h1's LAN    10.1.1.0/24   fd00:6101:1::/64   h1 .10 / ::10, r1 .1 / ::1
+  r1-r2 link  10.1.12.0/30   fd00:6101:12::/64   r1 .1 / ::1, r2 .2 / ::2
+  r1-r3 link  10.1.13.0/30   fd00:6101:13::/64   r1 .1 / ::1, r3 .2 / ::2
+  r3-r2 link  10.1.23.0/30   fd00:6101:23::/64   r3 .1 / ::1, r2 .2 / ::2
+  h2's LAN    10.1.32.0/24   fd00:6101:32::/64   r2 .1 / ::1, h2 .10 / ::10
+  h3's LAN    10.1.33.0/24   fd00:6101:33::/64   r2 .1 / ::1, h3 .10 / ::10
+

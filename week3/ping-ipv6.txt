@@ -1,0 +1,16 @@
+PING fd00:6101:32::10 (fd00:6101:32::10) 56 data bytes
+64 bytes from fd00:6101:32::10: icmp_seq=1 ttl=62 time=0.322 ms
+64 bytes from fd00:6101:32::10: icmp_seq=2 ttl=62 time=0.090 ms
+64 bytes from fd00:6101:32::10: icmp_seq=3 ttl=62 time=0.078 ms
+
+--- fd00:6101:32::10 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2044ms
+rtt min/avg/max/mdev = 0.078/0.163/0.322/0.112 ms
+PING fd00:6101:33::10 (fd00:6101:33::10) 56 data bytes
+64 bytes from fd00:6101:33::10: icmp_seq=1 ttl=62 time=0.226 ms
+64 bytes from fd00:6101:33::10: icmp_seq=2 ttl=62 time=0.138 ms
+64 bytes from fd00:6101:33::10: icmp_seq=3 ttl=62 time=0.102 ms
+
+--- fd00:6101:33::10 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2071ms
+rtt min/avg/max/mdev = 0.102/0.155/0.226/0.052 ms

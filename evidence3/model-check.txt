@@ -1,0 +1,2 @@
+PASS: all 12 directed model paths, /22 coverage, /24 preference and fallback;
+assignment and guided checkers reject loops and missing routes; invalid next hops rejected.

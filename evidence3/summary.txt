@@ -1,0 +1,6 @@
+== r4 lookup h2
+10.1.48.10 via 10.1.34.1 dev r4-eth1 src 10.1.34.2 uid 0 
+    cache 
+== r4 lookup h3
+10.1.50.10 via 10.1.34.1 dev r4-eth1 src 10.1.34.2 uid 0 
+    cache 
