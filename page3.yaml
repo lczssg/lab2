@@ -1,0 +1,34 @@
+# page3.yaml: the words on your Week 3 page. make_page3.py puts each answer under its question.
+# A few sentences each, in your own words, about YOUR network and YOUR evidence.
+# Leave a blank line between paragraphs. Never put your name or full student ID here.
+
+repository: https://github.com/lczssg/lab2
+
+answers:
+  design:
+    question: "Describe your design: why these routers, LANs and links, and how you chose the addresses."
+    answer: |
+      I use four routers in a ring, r1-r2-r3-r4-r1, with one host on each router's LAN. The ring provides a second physical path between routers and makes it possible to compare physical redundancy with the behaviour of static routes. Each host has its local router as its default gateway.
+
+      My student ID ends in 6101, so the personal address block is 10.1.0.0/16. The LANs are 10.1.8.0/24, 10.1.48.0/24, 10.1.50.0/24 and 10.1.80.0/24. Each LAN router uses .1 and its host uses .10. The four router links use separate /30 networks: 10.1.12.0/30, 10.1.23.0/30, 10.1.34.0/30 and 10.1.14.0/30. A /24 leaves room for more LAN hosts; a /30 supplies the two usable addresses needed by a point-to-point link. No LAN or link subnet overlaps another.
+  summary:
+    question: "Which route summarises several LANs? Which networks does it cover, why is it correct, and what else would it attract if you added a network inside its range?"
+    answer: |
+      The summary prefix 10.1.48.0/22 covers addresses from 10.1.48.0 to 10.1.51.255. It includes the h2 LAN, 10.1.48.0/24, and the h3 LAN, 10.1.50.0/24, but excludes the h1 and h4 LANs. On r4 this summary points to r3 at 10.1.34.1; r3 can forward to h2 through r2 or deliver to its own h3 LAN. The two route lookups in evidence3/summary.txt test these destinations at r4.
+
+      r1 also has the /22 summary through r2, but its more specific 10.1.50.0/24 route through r4 wins for h3 because /24 is longer than /22. Thus the normal h1-to-h3 path takes r1-r4-r3, while the h1-to-h2 path takes r1-r2. A summary is not a claim that every address inside it is reachable: it also attracts traffic for the currently unused 10.1.49.0/24 and 10.1.51.0/24 ranges. Adding a LAN in either range would require checking downstream routes and return paths before calling it reachable.
+  failure:
+    question: "When you took a link down, what happened, and why couldn't your routes recover even though another path existed? What would have recovered?"
+    answer: |
+      Before the fault, h1 reached h3 through r1-r4-r3. After I ran link r1 r4 down, Linux removed the connected link route and the static routes using that interface. The r1 lookup for 10.1.50.10 then used the surviving /22 through 10.1.12.2, and traceroute showed r1 followed by r2 before timing out. This was a fallback to an existing less-specific route, not a newly calculated replacement path.
+
+      The forward direction alone was not enough: r4 had lost its static route back to h1's 10.1.8.0/24 LAN. Restoring the link did not recreate the removed static entries; the next ping still had 100% loss and r4's route lookup to h1 reported Network is unreachable. I explicitly reinstalled r1's routes to 10.1.50.0/24 and 10.1.80.0/24 through 10.1.14.2, and r4's route to 10.1.8.0/24 through 10.1.14.1. Then h1-to-h3 ping received 3/3 replies, its four-hop trace returned, and the final four-host matrix received 12/12. These stages are recorded in evidence3/failure.txt and evidence3/session.txt.
+
+      A routing protocol such as OSPF, or a controller observing the failure, could compute and install usable paths in both directions through the surviving r1-r2-r3-r4 links. My static configuration had no such failure-detection or route-reinstallation mechanism; a physical alternative alone was insufficient.
+  control_plane:
+    question: "In your network, what was the control plane? Who worked out the routes, and what does that mean for a network of 40 routers?"
+    answer: |
+      In this network I act as the route planner: I choose the topology, addresses and static next hops in network.yaml. The Python program checks the supplied forwarding paths and installs the static routes. This combination is the control-plane work for the experiment; it does not discover topology changes or calculate replacement routes after a link fails. Linux IP forwarding then uses the installed tables to move packets, which is the data-plane work.
+
+      With 40 routers, manually coordinating all destination prefixes, summaries, next hops and return paths would make mistakes and inconsistent updates more likely. The path checker would still help reject the modelled loops and missing routes before deployment, but it would not detect every live failure. A routing protocol such as OSPF, or a controller with live topology information, could learn that a link has failed, calculate alternative paths and install new routes. That requires working failure detection and a connected alternative path; redundant cables alone do not provide it.
+

@@ -1,5 +1,7 @@
 # WIC2005 Lab 2 — A dual-stack network built from data
 
+Week 3 continues this repository: [routed-network page](https://lczssg.github.io/lab2/week3/) · [Week 3 reproduction and evidence](WEEK3.md).
+
 **Student ID suffix:** 6101 · **Lab date:** 17 October 2026
 
 [Published assignment](https://lczssg.github.io/lab2/) · [Repository](https://github.com/lczssg/lab2) · [Official Week 2 instructions](https://firdaussahran.github.io/wic2005/weeks/week-02/)

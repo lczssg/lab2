@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network 6101: routed, from data</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2937; }
+  h1 { font-size: 1.6rem; margin-bottom: .2rem; } h2 { margin-top: 2.2rem; border-bottom: 1px solid #e5e7eb; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; margin-bottom: 1rem; } th, td { border-bottom: 1px solid #e5e7eb; padding: .35rem .5rem; text-align: left; }
+  pre { background: #111827; color: #f3f4f6; padding: .8rem; border-radius: .4rem; overflow-x: auto; font-size: .82rem; }
+  pre.mermaid { background: none; color: inherit; } pre.missing { background: #fef2f2; color: #991b1b; }
+  .meta, .file { color: #6b7280; font-size: .85rem; } code { font-size: .88em; }
+</style>
+</head>
+<body>
+<p class="meta"><a href="../">← Week 2: my network, built from data</a></p>
+<h1>My routed network, from data</h1>
+<p class="meta">Student ID ending 6101 · generated from <code>network.yaml</code> by <code>make_page3.py</code> on 2026-10-24</p>
+<p id="summary">4 routers, 4 LANs and 4 router links, with 11 static routes, on <code>10.1.0.0/16</code>.
+Every route was checked for loops and missing routes before it reached a router.</p>
+<p>Repository: <a id="repository" href="https://github.com/lczssg/lab2">https://github.com/lczssg/lab2</a></p>
+
+<h2>The network</h2>
+<h3>LANs</h3>
+<section id="lans"><table><thead><tr><th>LAN</th><th>Network</th><th>Router (.1)</th><th>Host (.10)</th></tr></thead><tbody><tr><td>lan-h1</td><td><code>10.1.8.0/24</code></td><td>r1</td><td>h1 <code>10.1.8.10</code></td></tr><tr><td>lan-h2</td><td><code>10.1.48.0/24</code></td><td>r2</td><td>h2 <code>10.1.48.10</code></td></tr><tr><td>lan-h3</td><td><code>10.1.50.0/24</code></td><td>r3</td><td>h3 <code>10.1.50.10</code></td></tr><tr><td>lan-h4</td><td><code>10.1.80.0/24</code></td><td>r4</td><td>h4 <code>10.1.80.10</code></td></tr></tbody></table></section>
+<h3>Router links</h3>
+<section id="links"><table><thead><tr><th>Link</th><th>Network</th></tr></thead><tbody><tr><td>r1 — r2</td><td><code>10.1.12.0/30</code></td></tr><tr><td>r2 — r3</td><td><code>10.1.23.0/30</code></td></tr><tr><td>r3 — r4</td><td><code>10.1.34.0/30</code></td></tr><tr><td>r1 — r4</td><td><code>10.1.14.0/30</code></td></tr></tbody></table></section>
+<h3>Diagram</h3>
+<pre class="mermaid" id="diagram">graph LR
+  h1[&quot;h1&lt;br&gt;10.1.8.10&quot;] --- r1((r1))
+  h2[&quot;h2&lt;br&gt;10.1.48.10&quot;] --- r2((r2))
+  h3[&quot;h3&lt;br&gt;10.1.50.10&quot;] --- r3((r3))
+  h4[&quot;h4&lt;br&gt;10.1.80.10&quot;] --- r4((r4))
+  r1((r1)) ---|10.1.12.0/30| r2((r2))
+  r2((r2)) ---|10.1.23.0/30| r3((r3))
+  r3((r3)) ---|10.1.34.0/30| r4((r4))
+  r1((r1)) ---|10.1.14.0/30| r4((r4))</pre>
+
+<h2>Routing tables</h2>
+<section id="routing-tables"><h3>r1</h3><table><thead><tr><th>Destination</th><th>Next hop</th></tr></thead><tbody><tr><td><code>10.1.12.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.14.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.8.0/24</code></td><td>directly connected</td></tr><tr><td><code>10.1.50.0/24</code></td><td>10.1.14.2</td></tr><tr><td><code>10.1.80.0/24</code></td><td>10.1.14.2</td></tr><tr><td><code>10.1.48.0/22</code></td><td>10.1.12.2</td></tr></tbody></table>
+<h3>r2</h3><table><thead><tr><th>Destination</th><th>Next hop</th></tr></thead><tbody><tr><td><code>10.1.12.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.23.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.8.0/24</code></td><td>10.1.12.1</td></tr><tr><td><code>10.1.48.0/24</code></td><td>directly connected</td></tr><tr><td><code>10.1.50.0/24</code></td><td>10.1.23.2</td></tr><tr><td><code>10.1.80.0/24</code></td><td>10.1.23.2</td></tr></tbody></table>
+<h3>r3</h3><table><thead><tr><th>Destination</th><th>Next hop</th></tr></thead><tbody><tr><td><code>10.1.23.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.34.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.8.0/24</code></td><td>10.1.34.2</td></tr><tr><td><code>10.1.48.0/24</code></td><td>10.1.23.1</td></tr><tr><td><code>10.1.50.0/24</code></td><td>directly connected</td></tr><tr><td><code>10.1.80.0/24</code></td><td>10.1.34.2</td></tr></tbody></table>
+<h3>r4</h3><table><thead><tr><th>Destination</th><th>Next hop</th></tr></thead><tbody><tr><td><code>10.1.14.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.34.0/30</code></td><td>directly connected</td></tr><tr><td><code>10.1.8.0/24</code></td><td>10.1.14.1</td></tr><tr><td><code>10.1.80.0/24</code></td><td>directly connected</td></tr><tr><td><code>10.1.48.0/22</code></td><td>10.1.34.1</td></tr></tbody></table></section>
+
+<h2>Evidence from the running network</h2>
+<section id="evidence"><h3>Every directed LAN-host pair: explicit four-host ping matrix</h3>
+<p class="file">evidence3/pingall.txt</p>
+<pre id="evidence-pingall">== h1 -&gt; h2
+PING 10.1.48.10 (10.1.48.10) 56(84) bytes of data.
+64 bytes from 10.1.48.10: icmp_seq=1 ttl=62 time=0.036 ms
+64 bytes from 10.1.48.10: icmp_seq=2 ttl=62 time=0.099 ms
+
+--- 10.1.48.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1062ms
+rtt min/avg/max/mdev = 0.036/0.067/0.099/0.031 ms
+
+== h1 -&gt; h3
+PING 10.1.50.10 (10.1.50.10) 56(84) bytes of data.
+64 bytes from 10.1.50.10: icmp_seq=1 ttl=61 time=0.042 ms
+64 bytes from 10.1.50.10: icmp_seq=2 ttl=61 time=0.089 ms
+
+--- 10.1.50.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1049ms
+rtt min/avg/max/mdev = 0.042/0.065/0.089/0.023 ms
+
+== h1 -&gt; h4
+PING 10.1.80.10 (10.1.80.10) 56(84) bytes of data.
+64 bytes from 10.1.80.10: icmp_seq=1 ttl=62 time=0.063 ms
+64 bytes from 10.1.80.10: icmp_seq=2 ttl=62 time=0.068 ms
+
+--- 10.1.80.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1048ms
+rtt min/avg/max/mdev = 0.063/0.065/0.068/0.002 ms
+
+== h2 -&gt; h1
+PING 10.1.8.10 (10.1.8.10) 56(84) bytes of data.
+64 bytes from 10.1.8.10: icmp_seq=1 ttl=62 time=0.089 ms
+64 bytes from 10.1.8.10: icmp_seq=2 ttl=62 time=0.073 ms
+
+--- 10.1.8.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1049ms
+rtt min/avg/max/mdev = 0.073/0.081/0.089/0.008 ms
+
+== h2 -&gt; h3
+PING 10.1.50.10 (10.1.50.10) 56(84) bytes of data.
+64 bytes from 10.1.50.10: icmp_seq=1 ttl=62 time=0.060 ms
+64 bytes from 10.1.50.10: icmp_seq=2 ttl=62 time=0.073 ms
+
+--- 10.1.50.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1049ms
+rtt min/avg/max/mdev = 0.060/0.066/0.073/0.006 ms
+
+== h2 -&gt; h4
+PING 10.1.80.10 (10.1.80.10) 56(84) bytes of data.
+64 bytes from 10.1.80.10: icmp_seq=1 ttl=61 time=0.053 ms
+64 bytes from 10.1.80.10: icmp_seq=2 ttl=61 time=0.075 ms
+
+--- 10.1.80.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1049ms
+rtt min/avg/max/mdev = 0.053/0.064/0.075/0.011 ms
+
+== h3 -&gt; h1
+PING 10.1.8.10 (10.1.8.10) 56(84) bytes of data.
+64 bytes from 10.1.8.10: icmp_seq=1 ttl=61 time=0.066 ms
+64 bytes from 10.1.8.10: icmp_seq=2 ttl=61 time=0.067 ms
+
+--- 10.1.8.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1046ms
+rtt min/avg/max/mdev = 0.066/0.066/0.067/0.000 ms
+
+== h3 -&gt; h2
+PING 10.1.48.10 (10.1.48.10) 56(84) bytes of data.
+64 bytes from 10.1.48.10: icmp_seq=1 ttl=62 time=0.047 ms
+64 bytes from 10.1.48.10: icmp_seq=2 ttl=62 time=0.098 ms
+
+--- 10.1.48.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1037ms
+rtt min/avg/max/mdev = 0.047/0.072/0.098/0.025 ms
+
+== h3 -&gt; h4
+PING 10.1.80.10 (10.1.80.10) 56(84) bytes of data.
+64 bytes from 10.1.80.10: icmp_seq=1 ttl=62 time=0.054 ms
+64 bytes from 10.1.80.10: icmp_seq=2 ttl=62 time=0.063 ms
+
+--- 10.1.80.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1037ms
+rtt min/avg/max/mdev = 0.054/0.058/0.063/0.004 ms
+
+== h4 -&gt; h1
+PING 10.1.8.10 (10.1.8.10) 56(84) bytes of data.
+64 bytes from 10.1.8.10: icmp_seq=1 ttl=62 time=0.056 ms
+64 bytes from 10.1.8.10: icmp_seq=2 ttl=62 time=0.150 ms
+
+--- 10.1.8.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1038ms
+rtt min/avg/max/mdev = 0.056/0.103/0.150/0.047 ms
+
+== h4 -&gt; h2
+PING 10.1.48.10 (10.1.48.10) 56(84) bytes of data.
+64 bytes from 10.1.48.10: icmp_seq=1 ttl=61 time=0.096 ms
+64 bytes from 10.1.48.10: icmp_seq=2 ttl=61 time=0.081 ms
+
+--- 10.1.48.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1036ms
+rtt min/avg/max/mdev = 0.081/0.088/0.096/0.007 ms
+
+== h4 -&gt; h3
+PING 10.1.50.10 (10.1.50.10) 56(84) bytes of data.
+64 bytes from 10.1.50.10: icmp_seq=1 ttl=62 time=0.044 ms
+64 bytes from 10.1.50.10: icmp_seq=2 ttl=62 time=0.065 ms
+
+--- 10.1.50.10 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1038ms
+rtt min/avg/max/mdev = 0.044/0.054/0.065/0.010 ms</pre>
+<h3>Every router&#x27;s routing table: ip route</h3>
+<p class="file">evidence3/routes.txt</p>
+<pre id="evidence-routes">== r1
+10.1.8.0/24 dev r1-eth0 proto kernel scope link src 10.1.8.1 
+10.1.12.0/30 dev r1-eth1 proto kernel scope link src 10.1.12.1 
+10.1.14.0/30 dev r1-eth2 proto kernel scope link src 10.1.14.1 
+10.1.48.0/22 via 10.1.12.2 dev r1-eth1 
+10.1.50.0/24 via 10.1.14.2 dev r1-eth2 
+10.1.80.0/24 via 10.1.14.2 dev r1-eth2 
+== r2
+10.1.8.0/24 via 10.1.12.1 dev r2-eth1 
+10.1.12.0/30 dev r2-eth1 proto kernel scope link src 10.1.12.2 
+10.1.23.0/30 dev r2-eth2 proto kernel scope link src 10.1.23.1 
+10.1.48.0/24 dev r2-eth0 proto kernel scope link src 10.1.48.1 
+10.1.50.0/24 via 10.1.23.2 dev r2-eth2 
+10.1.80.0/24 via 10.1.23.2 dev r2-eth2 
+== r3
+10.1.8.0/24 via 10.1.34.2 dev r3-eth2 
+10.1.23.0/30 dev r3-eth1 proto kernel scope link src 10.1.23.2 
+10.1.34.0/30 dev r3-eth2 proto kernel scope link src 10.1.34.1 
+10.1.48.0/24 via 10.1.23.1 dev r3-eth1 
+10.1.50.0/24 dev r3-eth0 proto kernel scope link src 10.1.50.1 
+10.1.80.0/24 via 10.1.34.2 dev r3-eth2 
+== r4
+10.1.8.0/24 via 10.1.14.1 dev r4-eth2 
+10.1.14.0/30 dev r4-eth2 proto kernel scope link src 10.1.14.2 
+10.1.34.0/30 dev r4-eth1 proto kernel scope link src 10.1.34.2 
+10.1.48.0/22 via 10.1.34.1 dev r4-eth1 
+10.1.80.0/24 dev r4-eth0 proto kernel scope link src 10.1.80.1</pre>
+<h3>From one host to every other: traceroute</h3>
+<p class="file">evidence3/traces.txt</p>
+<pre id="evidence-traces">== h1 -&gt; h2
+traceroute to 10.1.48.10 (10.1.48.10), 8 hops max, 60 byte packets
+ 1  10.1.8.1  0.044 ms
+ 2  10.1.12.2  0.025 ms
+ 3  10.1.48.10  0.022 ms
+== h1 -&gt; h3
+traceroute to 10.1.50.10 (10.1.50.10), 8 hops max, 60 byte packets
+ 1  10.1.8.1  0.034 ms
+ 2  10.1.14.2  0.019 ms
+ 3  10.1.34.1  0.018 ms
+ 4  10.1.50.10  0.025 ms
+== h1 -&gt; h4
+traceroute to 10.1.80.10 (10.1.80.10), 8 hops max, 60 byte packets
+ 1  10.1.8.1  0.033 ms
+ 2  10.1.14.2  0.017 ms
+ 3  10.1.80.10  0.015 ms</pre>
+<h3>Your summary route at work: ip route get</h3>
+<p class="file">evidence3/summary.txt</p>
+<pre id="evidence-summary">== r4 lookup h2
+10.1.48.10 via 10.1.34.1 dev r4-eth1 src 10.1.34.2 uid 0 
+    cache 
+== r4 lookup h3
+10.1.50.10 via 10.1.34.1 dev r4-eth1 src 10.1.34.2 uid 0 
+    cache</pre>
+<h3>A link goes down: what static routes do</h3>
+<p class="file">evidence3/failure.txt</p>
+<pre id="evidence-failure">== before failure: h1 -&gt; h3
+traceroute to 10.1.50.10 (10.1.50.10), 5 hops max, 60 byte packets
+ 1  10.1.8.1  0.033 ms
+ 2  10.1.14.2  0.016 ms
+ 3  10.1.34.1  0.017 ms
+ 4  10.1.50.10  0.017 ms
+== r1-r4 down: h1 -&gt; h3
+traceroute to 10.1.50.10 (10.1.50.10), 5 hops max, 60 byte packets
+ 1  10.1.8.1  0.054 ms
+ 2  10.1.12.2  0.022 ms
+ 3  *
+ 4  *
+ 5  *
+== r1 decision with link down
+10.1.50.10 via 10.1.12.2 dev r1-eth1 src 10.1.12.1 uid 0 
+    cache 
+10.1.8.0/24 dev r1-eth0 proto kernel scope link src 10.1.8.1 
+10.1.12.0/30 dev r1-eth1 proto kernel scope link src 10.1.12.1 
+10.1.48.0/22 via 10.1.12.2 dev r1-eth1 
+== r4 routes with link down
+10.1.34.0/30 dev r4-eth1 proto kernel scope link src 10.1.34.2 
+10.1.48.0/22 via 10.1.34.1 dev r4-eth1 
+10.1.80.0/24 dev r4-eth0 proto kernel scope link src 10.1.80.1 
+== link up alone: static routes are not reinstalled
+PING 10.1.50.10 (10.1.50.10) 56(84) bytes of data.
+
+--- 10.1.50.10 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+RTNETLINK answers: Network is unreachable
+== static routes reinstalled: h1 -&gt; h3
+PING 10.1.50.10 (10.1.50.10) 56(84) bytes of data.
+64 bytes from 10.1.50.10: icmp_seq=1 ttl=61 time=0.089 ms
+64 bytes from 10.1.50.10: icmp_seq=2 ttl=61 time=0.075 ms
+64 bytes from 10.1.50.10: icmp_seq=3 ttl=61 time=0.090 ms
+
+--- 10.1.50.10 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2060ms
+rtt min/avg/max/mdev = 0.075/0.084/0.090/0.006 ms
+traceroute to 10.1.50.10 (10.1.50.10), 5 hops max, 60 byte packets
+ 1  10.1.8.1  0.030 ms
+ 2  10.1.14.2  0.017 ms
+ 3  10.1.34.1  0.018 ms
+ 4  10.1.50.10  0.017 ms
+== recovered r1 and r4 routes
+10.1.8.0/24 dev r1-eth0 proto kernel scope link src 10.1.8.1 
+10.1.12.0/30 dev r1-eth1 proto kernel scope link src 10.1.12.1 
+10.1.14.0/30 dev r1-eth2 proto kernel scope link src 10.1.14.1 
+10.1.48.0/22 via 10.1.12.2 dev r1-eth1 
+10.1.50.0/24 via 10.1.14.2 dev r1-eth2 
+10.1.80.0/24 via 10.1.14.2 dev r1-eth2 
+10.1.8.0/24 via 10.1.14.1 dev r4-eth2 
+10.1.14.0/30 dev r4-eth2 proto kernel scope link src 10.1.14.2 
+10.1.34.0/30 dev r4-eth1 proto kernel scope link src 10.1.34.2 
+10.1.48.0/22 via 10.1.34.1 dev r4-eth1 
+10.1.80.0/24 dev r4-eth0 proto kernel scope link src 10.1.80.1</pre>
+<h3>check_paths() stopping a loop and a missing route</h3>
+<p class="file">evidence3/check.txt</p>
+<pre id="evidence-check">PROBLEM: h3 to h1: loop r3 -&gt; r4 -&gt; r3
+PROBLEM: h4 to h1: loop r4 -&gt; r3 -&gt; r4
+Fix the description and try again: nothing was built.
+PROBLEM: h2 to h3: r2 has no route to 10.1.50.10
+Fix the description and try again: nothing was built.</pre></section>
+
+<h2>What I learned</h2>
+<section id="answers"><section id="answer-design"><h3>Describe your design: why these routers, LANs and links, and how you chose the addresses.</h3><p>I use four routers in a ring, r1-r2-r3-r4-r1, with one host on each router&#x27;s LAN. The ring provides a second physical path between routers and makes it possible to compare physical redundancy with the behaviour of static routes. Each host has its local router as its default gateway.</p><p>My student ID ends in 6101, so the personal address block is 10.1.0.0/16. The LANs are 10.1.8.0/24, 10.1.48.0/24, 10.1.50.0/24 and 10.1.80.0/24. Each LAN router uses .1 and its host uses .10. The four router links use separate /30 networks: 10.1.12.0/30, 10.1.23.0/30, 10.1.34.0/30 and 10.1.14.0/30. A /24 leaves room for more LAN hosts; a /30 supplies the two usable addresses needed by a point-to-point link. No LAN or link subnet overlaps another.</p></section>
+<section id="answer-summary"><h3>Which route summarises several LANs? Which networks does it cover, why is it correct, and what else would it attract if you added a network inside its range?</h3><p>The summary prefix 10.1.48.0/22 covers addresses from 10.1.48.0 to 10.1.51.255. It includes the h2 LAN, 10.1.48.0/24, and the h3 LAN, 10.1.50.0/24, but excludes the h1 and h4 LANs. On r4 this summary points to r3 at 10.1.34.1; r3 can forward to h2 through r2 or deliver to its own h3 LAN. The two route lookups in evidence3/summary.txt test these destinations at r4.</p><p>r1 also has the /22 summary through r2, but its more specific 10.1.50.0/24 route through r4 wins for h3 because /24 is longer than /22. Thus the normal h1-to-h3 path takes r1-r4-r3, while the h1-to-h2 path takes r1-r2. A summary is not a claim that every address inside it is reachable: it also attracts traffic for the currently unused 10.1.49.0/24 and 10.1.51.0/24 ranges. Adding a LAN in either range would require checking downstream routes and return paths before calling it reachable.</p></section>
+<section id="answer-failure"><h3>When you took a link down, what happened, and why couldn&#x27;t your routes recover even though another path existed? What would have recovered?</h3><p>Before the fault, h1 reached h3 through r1-r4-r3. After I ran link r1 r4 down, Linux removed the connected link route and the static routes using that interface. The r1 lookup for 10.1.50.10 then used the surviving /22 through 10.1.12.2, and traceroute showed r1 followed by r2 before timing out. This was a fallback to an existing less-specific route, not a newly calculated replacement path.</p><p>The forward direction alone was not enough: r4 had lost its static route back to h1&#x27;s 10.1.8.0/24 LAN. Restoring the link did not recreate the removed static entries; the next ping still had 100% loss and r4&#x27;s route lookup to h1 reported Network is unreachable. I explicitly reinstalled r1&#x27;s routes to 10.1.50.0/24 and 10.1.80.0/24 through 10.1.14.2, and r4&#x27;s route to 10.1.8.0/24 through 10.1.14.1. Then h1-to-h3 ping received 3/3 replies, its four-hop trace returned, and the final four-host matrix received 12/12. These stages are recorded in evidence3/failure.txt and evidence3/session.txt.</p><p>A routing protocol such as OSPF, or a controller observing the failure, could compute and install usable paths in both directions through the surviving r1-r2-r3-r4 links. My static configuration had no such failure-detection or route-reinstallation mechanism; a physical alternative alone was insufficient.</p></section>
+<section id="answer-control_plane"><h3>In your network, what was the control plane? Who worked out the routes, and what does that mean for a network of 40 routers?</h3><p>In this network I act as the route planner: I choose the topology, addresses and static next hops in network.yaml. The Python program checks the supplied forwarding paths and installs the static routes. This combination is the control-plane work for the experiment; it does not discover topology changes or calculate replacement routes after a link fails. Linux IP forwarding then uses the installed tables to move packets, which is the data-plane work.</p><p>With 40 routers, manually coordinating all destination prefixes, summaries, next hops and return paths would make mistakes and inconsistent updates more likely. The path checker would still help reject the modelled loops and missing routes before deployment, but it would not detect every live failure. A routing protocol such as OSPF, or a controller with live topology information, could learn that a link has failed, calculate alternative paths and install new routes. That requires working failure detection and a connected alternative path; redundant cables alone do not provide it.</p></section></section>
+
+<script type="application/json" id="network-data">{
+  "student_id_last4": "6101",
+  "routers": [
+    "r1",
+    "r2",
+    "r3",
+    "r4"
+  ],
+  "lans": [
+    {
+      "name": "lan-h1",
+      "network": "10.1.8.0/24",
+      "router": "r1",
+      "host": "h1"
+    },
+    {
+      "name": "lan-h2",
+      "network": "10.1.48.0/24",
+      "router": "r2",
+      "host": "h2"
+    },
+    {
+      "name": "lan-h3",
+      "network": "10.1.50.0/24",
+      "router": "r3",
+      "host": "h3"
+    },
+    {
+      "name": "lan-h4",
+      "network": "10.1.80.0/24",
+      "router": "r4",
+      "host": "h4"
+    }
+  ],
+  "links": [
+    [
+      "r1",
+      "r2",
+      "10.1.12.0/30"
+    ],
+    [
+      "r2",
+      "r3",
+      "10.1.23.0/30"
+    ],
+    [
+      "r3",
+      "r4",
+      "10.1.34.0/30"
+    ],
+    [
+      "r1",
+      "r4",
+      "10.1.14.0/30"
+    ]
+  ],
+  "routes": {
+    "r1": [
+      {
+        "to": "10.1.48.0/22",
+        "via": "10.1.12.2"
+      },
+      {
+        "to": "10.1.50.0/24",
+        "via": "10.1.14.2"
+      },
+      {
+        "to": "10.1.80.0/24",
+        "via": "10.1.14.2"
+      }
+    ],
+    "r2": [
+      {
+        "to": "10.1.8.0/24",
+        "via": "10.1.12.1"
+      },
+      {
+        "to": "10.1.50.0/24",
+        "via": "10.1.23.2"
+      },
+      {
+        "to": "10.1.80.0/24",
+        "via": "10.1.23.2"
+      }
+    ],
+    "r3": [
+      {
+        "to": "10.1.8.0/24",
+        "via": "10.1.34.2"
+      },
+      {
+        "to": "10.1.48.0/24",
+        "via": "10.1.23.1"
+      },
+      {
+        "to": "10.1.80.0/24",
+        "via": "10.1.34.2"
+      }
+    ],
+    "r4": [
+      {
+        "to": "10.1.8.0/24",
+        "via": "10.1.14.1"
+      },
+      {
+        "to": "10.1.48.0/22",
+        "via": "10.1.34.1"
+      }
+    ]
+  }
+}</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true });
+</script>
+</body>
+</html>
