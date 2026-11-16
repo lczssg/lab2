@@ -1,0 +1,24 @@
+# Cold storage and catalogue services share one fabric but keep separate LANs.
+student_id_last4: "6101"
+underlay:
+  network: 10.1.0.0/24
+  mtu: 1500
+hypervisors: [quay, ridge, vale]
+tenants:
+  - name: aster
+    vni: 6101
+    network: 10.1.61.0/24
+    mtu: 1450
+    vms:
+      - [catalog, quay]
+      - [replica, ridge]
+      - [standby, vale]
+      - [indexer, quay]
+  - name: birch
+    vni: 6201
+    network: 10.1.61.0/24
+    mtu: 1450
+    vms:
+      - [ingest, vale]
+      - [archive, ridge]
+      - [audit, ridge]
