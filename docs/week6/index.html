@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay 6101: my data centre, from data</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2937; }
+  h1 { font-size: 1.6rem; margin-bottom: .2rem; } h2 { margin-top: 2.2rem; border-bottom: 1px solid #e5e7eb; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; margin-bottom: 1rem; } th, td { border-bottom: 1px solid #e5e7eb; padding: .35rem .5rem; text-align: left; }
+  pre { background: #111827; color: #f3f4f6; padding: .8rem; border-radius: .4rem; overflow-x: auto; font-size: .82rem; }
+  pre.mermaid { background: none; color: inherit; } pre.missing { background: #fef2f2; color: #991b1b; }
+  .meta, .file { color: #6b7280; font-size: .85rem; } code { font-size: .88em; }
+</style>
+</head>
+<body>
+<p class="meta"><a href="../">← Week 2: my network, built from data</a> · <a href="../week3/">Week 3: routed, from data</a></p>
+<h1>My data centre overlay, from data</h1>
+<p class="meta">Student ID ending 6101 · generated from <code>overlay.yaml</code> by <code>make_page6.py</code> on 2026-11-16</p>
+<p id="summary">3 hypervisors and 2 tenants (7 VMs) on <code>10.1.0.0/16</code>, joined by VXLAN.
+Every tenant's MTU was checked against the underlay before anything was built.</p>
+<p>Repository: <a id="repository" href="https://github.com/lczssg/lab2">https://github.com/lczssg/lab2</a></p>
+
+<h2>The design</h2>
+<h3>Hypervisors and the underlay</h3>
+<section id="hypervisors"><p>Underlay <code>10.1.0.0/24</code>, MTU 1500.</p><table><tr><th>Hypervisor</th><th>Underlay address</th><th>VMs</th></tr><tr><td>quay</td><td><code>10.1.0.1</code></td><td>catalog (aster), indexer (aster)</td></tr><tr><td>ridge</td><td><code>10.1.0.2</code></td><td>replica (aster), archive (birch), audit (birch)</td></tr><tr><td>vale</td><td><code>10.1.0.3</code></td><td>standby (aster), ingest (birch)</td></tr></table></section>
+<section id="tenants"><h3>aster: VNI 6101, <code>10.1.61.0/24</code>, MTU 1450</h3><table><tr><th>VM</th><th>On</th><th>Address</th><th>MAC</th></tr><tr><td>catalog</td><td>quay</td><td><code>10.1.61.10</code></td><td><code>02:00:17:d5:00:0a</code></td></tr><tr><td>replica</td><td>ridge</td><td><code>10.1.61.11</code></td><td><code>02:00:17:d5:00:0b</code></td></tr><tr><td>standby</td><td>vale</td><td><code>10.1.61.12</code></td><td><code>02:00:17:d5:00:0c</code></td></tr><tr><td>indexer</td><td>quay</td><td><code>10.1.61.13</code></td><td><code>02:00:17:d5:00:0d</code></td></tr></table>
+<h3>birch: VNI 6201, <code>10.1.61.0/24</code>, MTU 1450</h3><table><tr><th>VM</th><th>On</th><th>Address</th><th>MAC</th></tr><tr><td>ingest</td><td>vale</td><td><code>10.1.61.10</code></td><td><code>02:00:18:39:00:0a</code></td></tr><tr><td>archive</td><td>ridge</td><td><code>10.1.61.11</code></td><td><code>02:00:18:39:00:0b</code></td></tr><tr><td>audit</td><td>ridge</td><td><code>10.1.61.12</code></td><td><code>02:00:18:39:00:0c</code></td></tr></table></section>
+<h3>Diagram</h3>
+<pre class="mermaid" id="diagram">graph TB
+  s1[[underlay switch s1]]
+  quay[&quot;quay&lt;br&gt;10.1.0.1&quot;] --- s1
+  ridge[&quot;ridge&lt;br&gt;10.1.0.2&quot;] --- s1
+  vale[&quot;vale&lt;br&gt;10.1.0.3&quot;] --- s1
+  catalog(&quot;catalog&lt;br&gt;10.1.61.10&lt;br&gt;aster · VNI 6101&quot;) --- quay
+  replica(&quot;replica&lt;br&gt;10.1.61.11&lt;br&gt;aster · VNI 6101&quot;) --- ridge
+  standby(&quot;standby&lt;br&gt;10.1.61.12&lt;br&gt;aster · VNI 6101&quot;) --- vale
+  indexer(&quot;indexer&lt;br&gt;10.1.61.13&lt;br&gt;aster · VNI 6101&quot;) --- quay
+  ingest(&quot;ingest&lt;br&gt;10.1.61.10&lt;br&gt;birch · VNI 6201&quot;) --- vale
+  archive(&quot;archive&lt;br&gt;10.1.61.11&lt;br&gt;birch · VNI 6201&quot;) --- ridge
+  audit(&quot;audit&lt;br&gt;10.1.61.12&lt;br&gt;birch · VNI 6201&quot;) --- ridge</pre>
+
+<h2>VTEP commands, as built</h2>
+<p>What <code>tenant_commands()</code> ran on each hypervisor.</p>
+<section id="commands"><h3>quay</h3>
+<pre id="commands-quay">ip link add br6101 type bridge
+ip link set br6101 up
+ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+ip link set vxlan6101 master br6101
+ip link set vxlan6101 up
+ip link set quay-eth1 master br6101
+ip link set quay-eth1 up
+ip link set quay-eth2 master br6101
+ip link set quay-eth2 up
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3</pre>
+<h3>ridge</h3>
+<pre id="commands-ridge">ip link add br6101 type bridge
+ip link set br6101 up
+ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+ip link set vxlan6101 master br6101
+ip link set vxlan6101 up
+ip link set ridge-eth1 master br6101
+ip link set ridge-eth1 up
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+ip link add br6201 type bridge
+ip link set br6201 up
+ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+ip link set vxlan6201 master br6201
+ip link set vxlan6201 up
+ip link set ridge-eth2 master br6201
+ip link set ridge-eth2 up
+ip link set ridge-eth3 master br6201
+ip link set ridge-eth3 up
+bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3</pre>
+<h3>vale</h3>
+<pre id="commands-vale">ip link add br6101 type bridge
+ip link set br6101 up
+ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+ip link set vxlan6101 master br6101
+ip link set vxlan6101 up
+ip link set vale-eth1 master br6101
+ip link set vale-eth1 up
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+ip link add br6201 type bridge
+ip link set br6201 up
+ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+ip link set vxlan6201 master br6201
+ip link set vxlan6201 up
+ip link set vale-eth2 master br6201
+ip link set vale-eth2 up
+bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2</pre></section>
+
+<h2>Evidence from the running overlay</h2>
+<section id="evidence"><h3>check_mtu() refusing the black-hole design</h3>
+<p class="file">evidence6/check.txt</p>
+<pre id="evidence-check">$ python3 build_overlay.py blackhole.yaml
+PROBLEM: tenant aster: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+PROBLEM: tenant birch: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+Fix the design and try again: nothing was built.
+[exit 1]</pre>
+<h3>Flood and learn: the VTEP table before, the flooded broadcast, the table after</h3>
+<p class="file">evidence6/flood.txt</p>
+<pre id="evidence-flood">== overlay.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+== quay before the first probe
+$ quay bridge fdb show dev vxlan6101
+ba:3b:8a:a4:94:c2 vlan 1 master br6101 permanent
+ba:3b:8a:a4:94:c2 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+[exit 0]
+== off-path capture on vale during the first ARP/ICMP exchange
+$ vale timeout -s INT 4 tcpdump -l -nnei vale-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on vale-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -c 2 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.317 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.161 ms
+
+--- 10.1.61.11 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1060ms
+rtt min/avg/max/mdev = 0.161/0.239/0.317/0.078 ms
+[exit 0]
+05:50:48.303545 5a:1f:39:32:25:6e &gt; 46:4b:b2:ff:1e:6a, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 &gt; 10.1.0.3.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a &gt; ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+
+1 packet captured
+1 packet received by filter
+0 packets dropped by kernel
+== VTEP FDBs after the probe
+$ quay bridge fdb show dev vxlan6101
+02:00:17:d5:00:0b master br6101
+ba:3b:8a:a4:94:c2 vlan 1 master br6101 permanent
+ba:3b:8a:a4:94:c2 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+02:00:17:d5:00:0b dst 10.1.0.2 self
+[exit 0]
+$ ridge bridge fdb show dev vxlan6101
+02:00:17:d5:00:0a master br6101
+5e:64:35:3c:ce:f8 vlan 1 master br6101 permanent
+5e:64:35:3c:ce:f8 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.1 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+02:00:17:d5:00:0a dst 10.1.0.1 self
+[exit 0]
+$ vale bridge fdb show dev vxlan6101
+02:00:17:d5:00:0a master br6101
+66:81:de:bd:dd:8f vlan 1 master br6101 permanent
+66:81:de:bd:dd:8f master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.1 self permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+02:00:17:d5:00:0a dst 10.1.0.1 self
+[exit 0]</pre>
+<h3>Two tenants, one address: who answers</h3>
+<p class="file">evidence6/isolation.txt</p>
+<pre id="evidence-isolation">== ridge hosts replica (Aster) and archive (Birch), both at 10.1.61.11
+$ catalog ip neigh flush dev catalog-eth0
+
+[exit 0]
+$ archive timeout -s INT 4 tcpdump -l -nnei archive-eth0 &#x27;arp or icmp&#x27; [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on archive-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -c 3 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.480 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.151 ms
+64 bytes from 10.1.61.11: icmp_seq=3 ttl=64 time=0.226 ms
+
+--- 10.1.61.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2071ms
+rtt min/avg/max/mdev = 0.151/0.285/0.480/0.140 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.11
+10.1.61.11 dev catalog-eth0 lladdr 02:00:17:d5:00:0b REACHABLE
+[exit 0]
+
+0 packets captured
+0 packets received by filter
+0 packets dropped by kernel
+== positive control on Birch; same capture point
+$ archive timeout -s INT 4 tcpdump -l -nnei archive-eth0 &#x27;arp or icmp&#x27; [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on archive-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ ingest ping -c 2 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.321 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.139 ms
+
+--- 10.1.61.11 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1053ms
+rtt min/avg/max/mdev = 0.139/0.230/0.321/0.091 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.11
+10.1.61.11 dev ingest-eth0 lladdr 02:00:18:39:00:0b REACHABLE
+[exit 0]
+05:50:56.468802 02:00:18:39:00:0a &gt; ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:50:56.468854 02:00:18:39:00:0b &gt; 02:00:18:39:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:18:39:00:0b, length 28
+05:50:56.468934 02:00:18:39:00:0a &gt; 02:00:18:39:00:0b, ethertype IPv4 (0x0800), length 98: 10.1.61.10 &gt; 10.1.61.11: ICMP echo request, id 281, seq 1, length 64
+05:50:56.468946 02:00:18:39:00:0b &gt; 02:00:18:39:00:0a, ethertype IPv4 (0x0800), length 98: 10.1.61.11 &gt; 10.1.61.10: ICMP echo reply, id 281, seq 1, length 64
+05:50:57.521898 02:00:18:39:00:0a &gt; 02:00:18:39:00:0b, ethertype IPv4 (0x0800), length 98: 10.1.61.10 &gt; 10.1.61.11: ICMP echo request, id 281, seq 2, length 64
+05:50:57.521918 02:00:18:39:00:0b &gt; 02:00:18:39:00:0a, ethertype IPv4 (0x0800), length 98: 10.1.61.11 &gt; 10.1.61.10: ICMP echo reply, id 281, seq 2, length 64
+
+6 packets captured
+6 packets received by filter
+0 packets dropped by kernel
+== every ordered same-tenant pair, including co-located VMs
+$ catalog ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.11
+10.1.61.11 dev catalog-eth0 lladdr 02:00:17:d5:00:0b REACHABLE
+[exit 0]
+$ catalog ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.258 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.258/0.258/0.258/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.12
+10.1.61.12 dev catalog-eth0 lladdr 02:00:17:d5:00:0c REACHABLE
+[exit 0]
+$ catalog ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.244 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.244/0.244/0.244/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.13
+10.1.61.13 dev catalog-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.105 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.105/0.105/0.105/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.10
+10.1.61.10 dev replica-eth0 lladdr 02:00:17:d5:00:0a REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.294 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.294/0.294/0.294/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.12
+10.1.61.12 dev replica-eth0 lladdr 02:00:17:d5:00:0c REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.284 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.284/0.284/0.284/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.13
+10.1.61.13 dev replica-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.123 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.123/0.123/0.123/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.10
+10.1.61.10 dev standby-eth0 lladdr 02:00:17:d5:00:0a DELAY
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.095 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.095/0.095/0.095/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.11
+10.1.61.11 dev standby-eth0 lladdr 02:00:17:d5:00:0b DELAY
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.219 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.219/0.219/0.219/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.13
+10.1.61.13 dev standby-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.060 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.060/0.060/0.060/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.10
+10.1.61.10 dev indexer-eth0 lladdr 02:00:17:d5:00:0a DELAY
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.131 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.131/0.131/0.131/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.11
+10.1.61.11 dev indexer-eth0 lladdr 02:00:17:d5:00:0b DELAY
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.123 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.123/0.123/0.123/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.12
+10.1.61.12 dev indexer-eth0 lladdr 02:00:17:d5:00:0c DELAY
+[exit 0]
+$ ingest ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.092 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.092/0.092/0.092/0.000 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.11
+10.1.61.11 dev ingest-eth0 lladdr 02:00:18:39:00:0b REACHABLE
+[exit 0]
+$ ingest ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.355 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.355/0.355/0.355/0.000 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.12
+10.1.61.12 dev ingest-eth0 lladdr 02:00:18:39:00:0c REACHABLE
+[exit 0]
+$ archive ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.088 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.088/0.088/0.088/0.000 ms
+[exit 0]
+$ archive ip neigh show 10.1.61.10
+10.1.61.10 dev archive-eth0 lladdr 02:00:18:39:00:0a DELAY
+[exit 0]
+$ archive ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.144 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.144/0.144/0.144/0.000 ms
+[exit 0]
+$ archive ip neigh show 10.1.61.12
+10.1.61.12 dev archive-eth0 lladdr 02:00:18:39:00:0c REACHABLE
+[exit 0]
+$ audit ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.118 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.118/0.118/0.118/0.000 ms
+[exit 0]
+$ audit ip neigh show 10.1.61.10
+10.1.61.10 dev audit-eth0 lladdr 02:00:18:39:00:0a DELAY
+[exit 0]
+$ audit ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.088 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.088/0.088/0.088/0.000 ms
+[exit 0]
+$ audit ip neigh show 10.1.61.11
+10.1.61.11 dev audit-eth0 lladdr 02:00:18:39:00:0b DELAY
+[exit 0]
+== reverse negative control: .13 exists only in Aster
+$ ingest ping -c 2 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+
+--- 10.1.61.13 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1072ms
+
+[exit 1]
+$ ingest ip neigh show 10.1.61.13
+10.1.61.13 dev ingest-eth0 INCOMPLETE
+[exit 0]</pre>
+<h3>The black hole: tenant MTU 1500 on a 1500-byte underlay</h3>
+<p class="file">evidence6/blackhole.txt</p>
+<pre id="evidence-blackhole">== blackhole.yaml (fresh network)
+Forced diagnostic build: tenant aster: needs 1550 bytes on the underlay (MTU 1500, short by 50); tenant birch: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ping -M do -c 1 -W 1 -s 56 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.613 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.613/0.613/0.613/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1472 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1472(1500) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 54798 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  0.00 Bytes  0.00 bits/sec    2   1.41 KBytes
+[  7]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+[  7]   2.00-3.00   sec  0.00 Bytes  0.00 bits/sec    0   1.41 KBytes
+[  7]   3.00-4.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+[  7]   4.00-5.00   sec  0.00 Bytes  0.00 bits/sec    0   1.41 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  0.00 Bytes  0.00 bits/sec    4             sender
+[  7]   0.00-5.00   sec  0.00 Bytes  0.00 bits/sec                  receiver
+
+iperf Done.
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 764 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 764(792) bytes of data.
+772 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.127 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.127/0.127/0.127/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1118 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1118(1146) bytes of data.
+1126 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1295 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1295(1323) bytes of data.
+1303 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.120 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.120/0.120/0.120/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1383 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1383(1411) bytes of data.
+1391 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.128 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.128/0.128/0.128/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1427 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1427(1455) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1405 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1405(1433) bytes of data.
+1413 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1416 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1416(1444) bytes of data.
+1424 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.113 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.113/0.113/0.113/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1421 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1421(1449) bytes of data.
+1429 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.349 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.349/0.349/0.349/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1424 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1424(1452) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.121 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.121/0.121/0.121/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+== repeated DF boundary: largest pass 1422; smallest failure 1423
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.119 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.119/0.119/0.119/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.118 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.118/0.118/0.118/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]</pre>
+<h3>Two fixes, measured</h3>
+<p class="file">evidence6/fixes.txt</p>
+<pre id="evidence-fixes">== mtu_a.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ip -br link show catalog-eth0
+catalog-eth0@if3 UP             02:00:17:d5:00:0a &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;
+[exit 0]
+$ quay ip -br link show quay-eth0
+quay-eth0@if10   UP             1a:50:80:99:f7:13 &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;
+[exit 0]
+$ quay ip -d link show dev vxlan6101
+6: vxlan6101: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1450 qdisc noqueue master br6101 state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 52:b9:06:8c:7d:bf brd ff:ff:ff:ff:ff:ff promiscuity 1 minmtu 68 maxmtu 65535
+    vxlan id 6101 local 10.1.0.1 dev quay-eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.6:75:c2:c8:19:d4 designated_root 8000.6:75:c2:c8:19:d4 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer   13.59 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535
+info: Using default fan map value (33)
+[exit 0]
+$ ridge timeout -s INT 4 tcpdump -l -nnei ridge-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on ridge-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.305 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.305/0.305/0.305/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1450
+[exit 1]
+05:51:37.402327 1a:50:80:99:f7:13 &gt; 42:c0:c7:4a:74:0e, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 &gt; 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a &gt; ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:51:37.402418 42:c0:c7:4a:74:0e &gt; 1a:50:80:99:f7:13, ethertype IPv4 (0x0800), length 92: 10.1.0.2.44237 &gt; 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b &gt; 02:00:17:d5:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:17:d5:00:0b, length 28
+05:51:37.402449 1a:50:80:99:f7:13 &gt; 42:c0:c7:4a:74:0e, ethertype IPv4 (0x0800), length 1514: 10.1.0.1.37921 &gt; 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a &gt; 02:00:17:d5:00:0b, ethertype IPv4 (0x0800), length 1464: 10.1.61.10 &gt; 10.1.61.11: ICMP echo request, id 921, seq 1, length 1430
+05:51:37.402472 42:c0:c7:4a:74:0e &gt; 1a:50:80:99:f7:13, ethertype IPv4 (0x0800), length 1514: 10.1.0.2.37921 &gt; 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b &gt; 02:00:17:d5:00:0a, ethertype IPv4 (0x0800), length 1464: 10.1.61.11 &gt; 10.1.61.10: ICMP echo reply, id 921, seq 1, length 1430
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 50442 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec   103 MBytes   860 Mbits/sec  297    248 KBytes
+[  7]   1.00-2.00   sec   129 MBytes  1.08 Gbits/sec   14    248 KBytes
+[  7]   2.00-3.00   sec   115 MBytes   966 Mbits/sec   82    273 KBytes
+[  7]   3.00-4.00   sec   104 MBytes   870 Mbits/sec  260    254 KBytes
+[  7]   4.00-5.00   sec   120 MBytes  1.01 Gbits/sec   22    214 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec   578 MBytes   969 Mbits/sec  675             sender
+[  7]   0.00-5.00   sec   578 MBytes   969 Mbits/sec                  receiver
+
+iperf Done.
+[exit 0]
+== mtu_b.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ip -br link show catalog-eth0
+catalog-eth0@if3 UP             02:00:17:d5:00:0a &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;
+[exit 0]
+$ quay ip -br link show quay-eth0
+quay-eth0@if14   UP             d2:1b:a1:7a:31:30 &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;
+[exit 0]
+$ quay ip -d link show dev vxlan6101
+6: vxlan6101: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 8950 qdisc noqueue master br6101 state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether fa:30:ba:54:cf:12 brd ff:ff:ff:ff:ff:ff promiscuity 1 minmtu 68 maxmtu 65535
+    vxlan id 6101 local 10.1.0.1 dev quay-eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.32:39:d5:96:95:c6 designated_root 8000.32:39:d5:96:95:c6 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer   14.63 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535
+info: Using default fan map value (33)
+[exit 0]
+$ ridge timeout -s INT 4 tcpdump -l -nnei ridge-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on ridge-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -M do -c 1 -W 1 -s 1472 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1472(1500) bytes of data.
+1480 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.388 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.388/0.388/0.388/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1473 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1473(1501) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1500
+[exit 1]
+05:51:56.867329 d2:1b:a1:7a:31:30 &gt; 02:93:c8:21:89:46, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 &gt; 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a &gt; ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:51:56.867426 02:93:c8:21:89:46 &gt; d2:1b:a1:7a:31:30, ethertype IPv4 (0x0800), length 92: 10.1.0.2.44237 &gt; 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b &gt; 02:00:17:d5:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:17:d5:00:0b, length 28
+05:51:56.867456 d2:1b:a1:7a:31:30 &gt; 02:93:c8:21:89:46, ethertype IPv4 (0x0800), length 1564: 10.1.0.1.37921 &gt; 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a &gt; 02:00:17:d5:00:0b, ethertype IPv4 (0x0800), length 1514: 10.1.61.10 &gt; 10.1.61.11: ICMP echo request, id 1196, seq 1, length 1480
+05:51:56.867478 02:93:c8:21:89:46 &gt; d2:1b:a1:7a:31:30, ethertype IPv4 (0x0800), length 1564: 10.1.0.2.37921 &gt; 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b &gt; 02:00:17:d5:00:0a, ethertype IPv4 (0x0800), length 1514: 10.1.61.11 &gt; 10.1.61.10: ICMP echo reply, id 1196, seq 1, length 1480
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 60038 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec   121 MBytes  1.02 Gbits/sec  413    221 KBytes
+[  7]   1.00-2.00   sec   134 MBytes  1.13 Gbits/sec  127    221 KBytes
+[  7]   2.00-3.00   sec   144 MBytes  1.21 Gbits/sec    1    223 KBytes
+[  7]   3.00-4.00   sec   147 MBytes  1.23 Gbits/sec   47    228 KBytes
+[  7]   4.00-5.00   sec   143 MBytes  1.20 Gbits/sec    1    230 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec   714 MBytes  1.20 Gbits/sec  589             sender
+[  7]   0.00-5.00   sec   714 MBytes  1.20 Gbits/sec                  receiver
+
+iperf Done.
+[exit 0]</pre></section>
+
+<h2>What I learned</h2>
+<section id="answers"><section id="answer-design"><h3>Describe your design: hypervisors, tenants, VNIs and addresses. Which tenants overlap, and why did you place each VM where you did?</h3><p>The catalogue service (Aster, VNI 6101) and cold storage service (Birch, VNI 6201) both use 10.1.61.0/24. Quay (10.1.0.1) hosts the catalogue and its local indexer, Ridge (.2) hosts its replica, and Vale (.3) hosts its stand-by, so Aster has three placements. Birch receives uploads on Vale and keeps its archive and audit VMs together on Ridge. Ridge is also my isolation test: its Aster replica and Birch archive both use 10.1.61.11.</p></section>
+<section id="answer-isolation"><h3>Two of your VMs have the same IP address. Using your evidence, explain how a ping reaches the right one — and what would have to go wrong for one tenant to see another&#x27;s traffic.</h3><p>I flushed Catalog&#x27;s neighbor cache before pinging 10.1.61.11. It resolved to Replica at 02:00:17:d5:00:0b and the co-hosted Archive captured zero ARP or ICMP packets. From Birch&#x27;s Ingest, the same address resolved to Archive at 02:00:18:39:00:0b; Archive saw six packets, which confirms that the capture could see Birch traffic. All 18 directed same-tenant checks returned the expected MAC; Ingest could not resolve Aster-only .13. Each VNI has its own bridge, MAC table, and VM ports. Connecting a VM to the wrong bridge or accidentally joining the two VNIs would break that boundary.</p></section>
+<section id="answer-flood_learn"><h3>Using your evidence, explain what was flooded, to which hypervisors, and what each VTEP learned. With 50 hypervisors in one VNI, how many copies would one broadcast need — and how would EVPN change that?</h3><p>Before the probe, Quay&#x27;s VXLAN table had all-zero flood entries pointing to Ridge and Vale, and no learned VM MACs. Catalog&#x27;s ARP request for .11 was replicated to both peers. Vale captured the request in VNI 6101, with outer destination 10.1.0.3, and saw no ensuing unicast ping. Vale and Ridge both learned Catalog&#x27;s MAC at Quay (.1); Quay learned Replica&#x27;s MAC from the reply at Ridge (.2). With 50 participating hypervisors, one locally originated broadcast needs 49 unicast VXLAN copies. BGP EVPN can advertise MAC/IP reachability to reduce unknown-unicast and ARP flooding; real broadcasts still need a distribution method.</p></section>
+<section id="answer-mtu"><h3>Compare your two MTU fixes using your measurements. Which would you choose for a data centre, what does each cost, and who has to change what?</h3><p>Both 1500-byte tenants need 1550 bytes of outer IP capacity. In the forced failing build, 56-byte echo data worked, DF payloads of 1422/1423 bytes straddled the loss boundary, and the five-second TCP receiver got 0 bits/s. Fix A keeps the fabric at 1500 and sets tenant MTUs to 1450: 1422 bytes of DF payload passed, and 1423 was rejected locally. Fix B keeps tenant MTUs at 1500 and makes the fabric 9000: 1472 bytes passed, and 1473 was rejected locally. At those passing sizes the capture shows outer Ethernet lengths of 1514 and 1564 bytes. The TCP receiver measured 969 Mbit/s for A and 1.20 Gbit/s for B. These are single-host software measurements, so I would not use the difference to predict production throughput.</p><p>I chose A for this shared 1500-byte fabric. It only requires a consistent smaller MTU on tenant VM interfaces and their virtual ports, at the cost of 50 fewer bytes per full tenant packet. For a data centre where the network team controls and can validate every link and failover path, I would choose B to preserve the usual 1500-byte guest MTU. It requires consistent jumbo support on NICs and the entire underlay path. Tenant packets still top out at 1500 in this experiment; B did not make them jumbo.</p></section>
+<section id="answer-p4"><h3>If your hypervisors&#x27; VTEPs were P4 switches running the lecture&#x27;s vtep.p4, what would have to fill the vtep_encap table, and how? What would replace flood-and-learn?</h3><p>The lecture&#x27;s vtep_encap is keyed by local ingress port and destination MAC. A controller could derive the VNI from the port&#x27;s tenant, look up the destination&#x27;s advertised VTEP and resolve its underlay next hop, then install encapsulation entries via the switch control plane. It must also configure local delivery after decapsulation, keyed by the VNI and inner destination MAC. Static entries would work for these seven VMs; BGP EVPN plus a controller would distribute and withdraw reachability as VMs are added or move. That replaces data-plane learning for known destinations; it still needs an explicit policy for broadcasts, unknown unicast and multicast.</p></section></section>
+
+<script type="application/json" id="overlay-data">{
+  "design": {
+    "student_id_last4": "6101",
+    "underlay": {
+      "network": "10.1.0.0/24",
+      "mtu": 1500
+    },
+    "hypervisors": [
+      "quay",
+      "ridge",
+      "vale"
+    ],
+    "tenants": [
+      {
+        "name": "aster",
+        "vni": 6101,
+        "network": "10.1.61.0/24",
+        "mtu": 1450,
+        "vms": [
+          [
+            "catalog",
+            "quay"
+          ],
+          [
+            "replica",
+            "ridge"
+          ],
+          [
+            "standby",
+            "vale"
+          ],
+          [
+            "indexer",
+            "quay"
+          ]
+        ]
+      },
+      {
+        "name": "birch",
+        "vni": 6201,
+        "network": "10.1.61.0/24",
+        "mtu": 1450,
+        "vms": [
+          [
+            "ingest",
+            "vale"
+          ],
+          [
+            "archive",
+            "ridge"
+          ],
+          [
+            "audit",
+            "ridge"
+          ]
+        ]
+      }
+    ]
+  },
+  "commands": {
+    "quay": [
+      "ip link add br6101 type bridge",
+      "ip link set br6101 up",
+      "ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0",
+      "ip link set vxlan6101 master br6101",
+      "ip link set vxlan6101 up",
+      "ip link set quay-eth1 master br6101",
+      "ip link set quay-eth1 up",
+      "ip link set quay-eth2 master br6101",
+      "ip link set quay-eth2 up",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3"
+    ],
+    "ridge": [
+      "ip link add br6101 type bridge",
+      "ip link set br6101 up",
+      "ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0",
+      "ip link set vxlan6101 master br6101",
+      "ip link set vxlan6101 up",
+      "ip link set ridge-eth1 master br6101",
+      "ip link set ridge-eth1 up",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3",
+      "ip link add br6201 type bridge",
+      "ip link set br6201 up",
+      "ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0",
+      "ip link set vxlan6201 master br6201",
+      "ip link set vxlan6201 up",
+      "ip link set ridge-eth2 master br6201",
+      "ip link set ridge-eth2 up",
+      "ip link set ridge-eth3 master br6201",
+      "ip link set ridge-eth3 up",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3"
+    ],
+    "vale": [
+      "ip link add br6101 type bridge",
+      "ip link set br6101 up",
+      "ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0",
+      "ip link set vxlan6101 master br6101",
+      "ip link set vxlan6101 up",
+      "ip link set vale-eth1 master br6101",
+      "ip link set vale-eth1 up",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2",
+      "ip link add br6201 type bridge",
+      "ip link set br6201 up",
+      "ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0",
+      "ip link set vxlan6201 master br6201",
+      "ip link set vxlan6201 up",
+      "ip link set vale-eth2 master br6201",
+      "ip link set vale-eth2 up",
+      "bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2"
+    ]
+  }
+}</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true });
+</script>
+</body>
+</html>

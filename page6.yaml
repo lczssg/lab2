@@ -1,0 +1,29 @@
+# page6.yaml: the words on your Week 6 page. make_page6.py puts each answer under its question.
+# A few sentences each, in your own words, about YOUR overlay and YOUR evidence.
+# Leave a blank line between paragraphs. Don't put your name or your full student ID in this file.
+
+repository: https://github.com/lczssg/lab2
+
+answers:
+  design:
+    question: "Describe your design: hypervisors, tenants, VNIs and addresses. Which tenants overlap, and why did you place each VM where you did?"
+    answer: |
+      The catalogue service (Aster, VNI 6101) and cold storage service (Birch, VNI 6201) both use 10.1.61.0/24. Quay (10.1.0.1) hosts the catalogue and its local indexer, Ridge (.2) hosts its replica, and Vale (.3) hosts its stand-by, so Aster has three placements. Birch receives uploads on Vale and keeps its archive and audit VMs together on Ridge. Ridge is also my isolation test: its Aster replica and Birch archive both use 10.1.61.11.
+  isolation:
+    question: "Two of your VMs have the same IP address. Using your evidence, explain how a ping reaches the right one — and what would have to go wrong for one tenant to see another's traffic."
+    answer: |
+      I flushed Catalog's neighbor cache before pinging 10.1.61.11. It resolved to Replica at 02:00:17:d5:00:0b and the co-hosted Archive captured zero ARP or ICMP packets. From Birch's Ingest, the same address resolved to Archive at 02:00:18:39:00:0b; Archive saw six packets, which confirms that the capture could see Birch traffic. All 18 directed same-tenant checks returned the expected MAC; Ingest could not resolve Aster-only .13. Each VNI has its own bridge, MAC table, and VM ports. Connecting a VM to the wrong bridge or accidentally joining the two VNIs would break that boundary.
+  flood_learn:
+    question: "Using your evidence, explain what was flooded, to which hypervisors, and what each VTEP learned. With 50 hypervisors in one VNI, how many copies would one broadcast need — and how would EVPN change that?"
+    answer: |
+      Before the probe, Quay's VXLAN table had all-zero flood entries pointing to Ridge and Vale, and no learned VM MACs. Catalog's ARP request for .11 was replicated to both peers. Vale captured the request in VNI 6101, with outer destination 10.1.0.3, and saw no ensuing unicast ping. Vale and Ridge both learned Catalog's MAC at Quay (.1); Quay learned Replica's MAC from the reply at Ridge (.2). With 50 participating hypervisors, one locally originated broadcast needs 49 unicast VXLAN copies. BGP EVPN can advertise MAC/IP reachability to reduce unknown-unicast and ARP flooding; real broadcasts still need a distribution method.
+  mtu:
+    question: "Compare your two MTU fixes using your measurements. Which would you choose for a data centre, what does each cost, and who has to change what?"
+    answer: |
+      Both 1500-byte tenants need 1550 bytes of outer IP capacity. In the forced failing build, 56-byte echo data worked, DF payloads of 1422/1423 bytes straddled the loss boundary, and the five-second TCP receiver got 0 bits/s. Fix A keeps the fabric at 1500 and sets tenant MTUs to 1450: 1422 bytes of DF payload passed, and 1423 was rejected locally. Fix B keeps tenant MTUs at 1500 and makes the fabric 9000: 1472 bytes passed, and 1473 was rejected locally. At those passing sizes the capture shows outer Ethernet lengths of 1514 and 1564 bytes. The TCP receiver measured 969 Mbit/s for A and 1.20 Gbit/s for B. These are single-host software measurements, so I would not use the difference to predict production throughput.
+
+      I chose A for this shared 1500-byte fabric. It only requires a consistent smaller MTU on tenant VM interfaces and their virtual ports, at the cost of 50 fewer bytes per full tenant packet. For a data centre where the network team controls and can validate every link and failover path, I would choose B to preserve the usual 1500-byte guest MTU. It requires consistent jumbo support on NICs and the entire underlay path. Tenant packets still top out at 1500 in this experiment; B did not make them jumbo.
+  p4:
+    question: "If your hypervisors' VTEPs were P4 switches running the lecture's vtep.p4, what would have to fill the vtep_encap table, and how? What would replace flood-and-learn?"
+    answer: |
+      The lecture's vtep_encap is keyed by local ingress port and destination MAC. A controller could derive the VNI from the port's tenant, look up the destination's advertised VTEP and resolve its underlay next hop, then install encapsulation entries via the switch control plane. It must also configure local delivery after decapsulation, keyed by the VNI and inner destination MAC. Static entries would work for these seven VMs; BGP EVPN plus a controller would distribute and withdraw reachability as VMs are added or move. That replaces data-plane learning for known destinations; it still needs an explicit policy for broadcasts, unknown unicast and multicast.

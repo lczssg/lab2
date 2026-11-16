@@ -2,6 +2,8 @@
 
 Week 3 continues this repository: [routed-network page](https://lczssg.github.io/lab2/week3/) · [Week 3 reproduction and evidence](WEEK3.md).
 
+Week 6 adds [a multi-tenant VXLAN overlay](https://lczssg.github.io/lab2/week6/) with [lab reproduction and evidence](WEEK6.md).
+
 **Student ID suffix:** 6101 · **Lab date:** 17 October 2026
 
 [Published assignment](https://lczssg.github.io/lab2/) · [Repository](https://github.com/lczssg/lab2) · [Official Week 2 instructions](https://firdaussahran.github.io/wic2005/weeks/week-02/)
@@ -184,3 +186,6 @@ password or token is included in the assignment files.
 AI assisted implementation and documentation with lecturer permission; the evidence
 comes from actual local Mininet runs.
 
+## AI use
+
+For Week 6, OpenAI Codex helped verify the Spectrum and course requirements, propose the Aster/Birch topology, implement the VTEP commands and MTU validator in the instructor's scaffold, write the replay scripts, run the Docker/Mininet experiments, interpret the tcpdump, FDB, ping and iperf3 output, and draft the Week 6 page and lab write-up. The logs in evidence6/ were collected from actual runs. The instructor supplied the scaffold and page generator.
