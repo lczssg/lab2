@@ -1,0 +1,5 @@
+$ python3 build_overlay.py blackhole.yaml
+PROBLEM: tenant aster: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+PROBLEM: tenant birch: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+Fix the design and try again: nothing was built.
+[exit 1]

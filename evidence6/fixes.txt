@@ -1,0 +1,228 @@
+== mtu_a.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ip -br link show catalog-eth0
+catalog-eth0@if3 UP             02:00:17:d5:00:0a <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ quay ip -br link show quay-eth0
+quay-eth0@if10   UP             1a:50:80:99:f7:13 <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ quay ip -d link show dev vxlan6101
+6: vxlan6101: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master br6101 state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 52:b9:06:8c:7d:bf brd ff:ff:ff:ff:ff:ff promiscuity 1 minmtu 68 maxmtu 65535
+    vxlan id 6101 local 10.1.0.1 dev quay-eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.6:75:c2:c8:19:d4 designated_root 8000.6:75:c2:c8:19:d4 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer   13.59 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535
+info: Using default fan map value (33)
+[exit 0]
+$ ridge timeout -s INT 4 tcpdump -l -nnei ridge-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on ridge-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.305 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.305/0.305/0.305/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1450
+[exit 1]
+05:51:37.402327 1a:50:80:99:f7:13 > 42:c0:c7:4a:74:0e, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:51:37.402418 42:c0:c7:4a:74:0e > 1a:50:80:99:f7:13, ethertype IPv4 (0x0800), length 92: 10.1.0.2.44237 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b > 02:00:17:d5:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:17:d5:00:0b, length 28
+05:51:37.402449 1a:50:80:99:f7:13 > 42:c0:c7:4a:74:0e, ethertype IPv4 (0x0800), length 1514: 10.1.0.1.37921 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a > 02:00:17:d5:00:0b, ethertype IPv4 (0x0800), length 1464: 10.1.61.10 > 10.1.61.11: ICMP echo request, id 921, seq 1, length 1430
+05:51:37.402472 42:c0:c7:4a:74:0e > 1a:50:80:99:f7:13, ethertype IPv4 (0x0800), length 1514: 10.1.0.2.37921 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b > 02:00:17:d5:00:0a, ethertype IPv4 (0x0800), length 1464: 10.1.61.11 > 10.1.61.10: ICMP echo reply, id 921, seq 1, length 1430
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 50442 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec   103 MBytes   860 Mbits/sec  297    248 KBytes
+[  7]   1.00-2.00   sec   129 MBytes  1.08 Gbits/sec   14    248 KBytes
+[  7]   2.00-3.00   sec   115 MBytes   966 Mbits/sec   82    273 KBytes
+[  7]   3.00-4.00   sec   104 MBytes   870 Mbits/sec  260    254 KBytes
+[  7]   4.00-5.00   sec   120 MBytes  1.01 Gbits/sec   22    214 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec   578 MBytes   969 Mbits/sec  675             sender
+[  7]   0.00-5.00   sec   578 MBytes   969 Mbits/sec                  receiver
+
+iperf Done.
+[exit 0]
+== mtu_b.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ip -br link show catalog-eth0
+catalog-eth0@if3 UP             02:00:17:d5:00:0a <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ quay ip -br link show quay-eth0
+quay-eth0@if14   UP             d2:1b:a1:7a:31:30 <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ quay ip -d link show dev vxlan6101
+6: vxlan6101: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 8950 qdisc noqueue master br6101 state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether fa:30:ba:54:cf:12 brd ff:ff:ff:ff:ff:ff promiscuity 1 minmtu 68 maxmtu 65535
+    vxlan id 6101 local 10.1.0.1 dev quay-eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.32:39:d5:96:95:c6 designated_root 8000.32:39:d5:96:95:c6 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer   14.63 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535
+info: Using default fan map value (33)
+[exit 0]
+$ ridge timeout -s INT 4 tcpdump -l -nnei ridge-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on ridge-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -M do -c 1 -W 1 -s 1472 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1472(1500) bytes of data.
+1480 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.388 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.388/0.388/0.388/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1473 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1473(1501) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1500
+[exit 1]
+05:51:56.867329 d2:1b:a1:7a:31:30 > 02:93:c8:21:89:46, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:51:56.867426 02:93:c8:21:89:46 > d2:1b:a1:7a:31:30, ethertype IPv4 (0x0800), length 92: 10.1.0.2.44237 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b > 02:00:17:d5:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:17:d5:00:0b, length 28
+05:51:56.867456 d2:1b:a1:7a:31:30 > 02:93:c8:21:89:46, ethertype IPv4 (0x0800), length 1564: 10.1.0.1.37921 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a > 02:00:17:d5:00:0b, ethertype IPv4 (0x0800), length 1514: 10.1.61.10 > 10.1.61.11: ICMP echo request, id 1196, seq 1, length 1480
+05:51:56.867478 02:93:c8:21:89:46 > d2:1b:a1:7a:31:30, ethertype IPv4 (0x0800), length 1564: 10.1.0.2.37921 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0b > 02:00:17:d5:00:0a, ethertype IPv4 (0x0800), length 1514: 10.1.61.11 > 10.1.61.10: ICMP echo reply, id 1196, seq 1, length 1480
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 60038 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec   121 MBytes  1.02 Gbits/sec  413    221 KBytes
+[  7]   1.00-2.00   sec   134 MBytes  1.13 Gbits/sec  127    221 KBytes
+[  7]   2.00-3.00   sec   144 MBytes  1.21 Gbits/sec    1    223 KBytes
+[  7]   3.00-4.00   sec   147 MBytes  1.23 Gbits/sec   47    228 KBytes
+[  7]   4.00-5.00   sec   143 MBytes  1.20 Gbits/sec    1    230 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec   714 MBytes  1.20 Gbits/sec  589             sender
+[  7]   0.00-5.00   sec   714 MBytes  1.20 Gbits/sec                  receiver
+
+iperf Done.
+[exit 0]

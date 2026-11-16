@@ -1,0 +1,202 @@
+== blackhole.yaml (fresh network)
+Forced diagnostic build: tenant aster: needs 1550 bytes on the underlay (MTU 1500, short by 50); tenant birch: needs 1550 bytes on the underlay (MTU 1500, short by 50)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+$ catalog ping -M do -c 1 -W 1 -s 56 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.613 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.613/0.613/0.613/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1472 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1472(1500) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ replica iperf3 -s -D
+
+[exit 0]
+$ catalog timeout 15 iperf3 -c 10.1.61.11 -t 5
+Connecting to host 10.1.61.11, port 5201
+[  7] local 10.1.61.10 port 54798 connected to 10.1.61.11 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  0.00 Bytes  0.00 bits/sec    2   1.41 KBytes
+[  7]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+[  7]   2.00-3.00   sec  0.00 Bytes  0.00 bits/sec    0   1.41 KBytes
+[  7]   3.00-4.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+[  7]   4.00-5.00   sec  0.00 Bytes  0.00 bits/sec    0   1.41 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  0.00 Bytes  0.00 bits/sec    4             sender
+[  7]   0.00-5.00   sec  0.00 Bytes  0.00 bits/sec                  receiver
+
+iperf Done.
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 764 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 764(792) bytes of data.
+772 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.127 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.127/0.127/0.127/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1118 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1118(1146) bytes of data.
+1126 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1295 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1295(1323) bytes of data.
+1303 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.120 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.120/0.120/0.120/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1383 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1383(1411) bytes of data.
+1391 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.128 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.128/0.128/0.128/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1427 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1427(1455) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1405 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1405(1433) bytes of data.
+1413 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1416 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1416(1444) bytes of data.
+1424 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.113 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.113/0.113/0.113/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1421 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1421(1449) bytes of data.
+1429 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.349 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.349/0.349/0.349/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1424 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1424(1452) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.121 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.121/0.121/0.121/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+== repeated DF boundary: largest pass 1422; smallest failure 1423
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.119 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.119/0.119/0.119/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ catalog ping -M do -c 1 -W 1 -s 1422 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1422(1450) bytes of data.
+1430 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.118 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.118/0.118/0.118/0.000 ms
+[exit 0]
+$ catalog ping -M do -c 1 -W 1 -s 1423 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 1423(1451) bytes of data.
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]

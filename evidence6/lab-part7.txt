@@ -1,0 +1,13 @@
+$ docker run --rm --pull never --name wic2005-week6-alpine alpine:3.20 sh -c "ip addr show eth0; cat /etc/os-release; ps"
+2: eth0@if6: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP
+    link/ether ca:de:ea:55:e6:83 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+NAME="Alpine Linux"
+ID=alpine
+VERSION_ID=3.20.10
+PRETTY_NAME="Alpine Linux v3.20"
+HOME_URL="https://alpinelinux.org/"
+BUG_REPORT_URL="https://gitlab.alpinelinux.org/alpine/aports/-/issues"
+PID   USER     TIME  COMMAND
+    1 root      0:00 ps

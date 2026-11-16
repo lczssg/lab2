@@ -1,0 +1,260 @@
+== ridge hosts replica (Aster) and archive (Birch), both at 10.1.61.11
+$ catalog ip neigh flush dev catalog-eth0
+
+[exit 0]
+$ archive timeout -s INT 4 tcpdump -l -nnei archive-eth0 'arp or icmp' [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on archive-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -c 3 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.480 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.151 ms
+64 bytes from 10.1.61.11: icmp_seq=3 ttl=64 time=0.226 ms
+
+--- 10.1.61.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2071ms
+rtt min/avg/max/mdev = 0.151/0.285/0.480/0.140 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.11
+10.1.61.11 dev catalog-eth0 lladdr 02:00:17:d5:00:0b REACHABLE
+[exit 0]
+
+0 packets captured
+0 packets received by filter
+0 packets dropped by kernel
+== positive control on Birch; same capture point
+$ archive timeout -s INT 4 tcpdump -l -nnei archive-eth0 'arp or icmp' [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on archive-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ ingest ping -c 2 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.321 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.139 ms
+
+--- 10.1.61.11 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1053ms
+rtt min/avg/max/mdev = 0.139/0.230/0.321/0.091 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.11
+10.1.61.11 dev ingest-eth0 lladdr 02:00:18:39:00:0b REACHABLE
+[exit 0]
+05:50:56.468802 02:00:18:39:00:0a > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+05:50:56.468854 02:00:18:39:00:0b > 02:00:18:39:00:0a, ethertype ARP (0x0806), length 42: Reply 10.1.61.11 is-at 02:00:18:39:00:0b, length 28
+05:50:56.468934 02:00:18:39:00:0a > 02:00:18:39:00:0b, ethertype IPv4 (0x0800), length 98: 10.1.61.10 > 10.1.61.11: ICMP echo request, id 281, seq 1, length 64
+05:50:56.468946 02:00:18:39:00:0b > 02:00:18:39:00:0a, ethertype IPv4 (0x0800), length 98: 10.1.61.11 > 10.1.61.10: ICMP echo reply, id 281, seq 1, length 64
+05:50:57.521898 02:00:18:39:00:0a > 02:00:18:39:00:0b, ethertype IPv4 (0x0800), length 98: 10.1.61.10 > 10.1.61.11: ICMP echo request, id 281, seq 2, length 64
+05:50:57.521918 02:00:18:39:00:0b > 02:00:18:39:00:0a, ethertype IPv4 (0x0800), length 98: 10.1.61.11 > 10.1.61.10: ICMP echo reply, id 281, seq 2, length 64
+
+6 packets captured
+6 packets received by filter
+0 packets dropped by kernel
+== every ordered same-tenant pair, including co-located VMs
+$ catalog ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.122 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.122/0.122/0.122/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.11
+10.1.61.11 dev catalog-eth0 lladdr 02:00:17:d5:00:0b REACHABLE
+[exit 0]
+$ catalog ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.258 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.258/0.258/0.258/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.12
+10.1.61.12 dev catalog-eth0 lladdr 02:00:17:d5:00:0c REACHABLE
+[exit 0]
+$ catalog ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.244 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.244/0.244/0.244/0.000 ms
+[exit 0]
+$ catalog ip neigh show 10.1.61.13
+10.1.61.13 dev catalog-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.105 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.105/0.105/0.105/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.10
+10.1.61.10 dev replica-eth0 lladdr 02:00:17:d5:00:0a REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.294 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.294/0.294/0.294/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.12
+10.1.61.12 dev replica-eth0 lladdr 02:00:17:d5:00:0c REACHABLE
+[exit 0]
+$ replica ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.284 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.284/0.284/0.284/0.000 ms
+[exit 0]
+$ replica ip neigh show 10.1.61.13
+10.1.61.13 dev replica-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.123 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.123/0.123/0.123/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.10
+10.1.61.10 dev standby-eth0 lladdr 02:00:17:d5:00:0a DELAY
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.095 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.095/0.095/0.095/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.11
+10.1.61.11 dev standby-eth0 lladdr 02:00:17:d5:00:0b DELAY
+[exit 0]
+$ standby ping -c 1 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+64 bytes from 10.1.61.13: icmp_seq=1 ttl=64 time=0.219 ms
+
+--- 10.1.61.13 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.219/0.219/0.219/0.000 ms
+[exit 0]
+$ standby ip neigh show 10.1.61.13
+10.1.61.13 dev standby-eth0 lladdr 02:00:17:d5:00:0d REACHABLE
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.060 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.060/0.060/0.060/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.10
+10.1.61.10 dev indexer-eth0 lladdr 02:00:17:d5:00:0a DELAY
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.131 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.131/0.131/0.131/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.11
+10.1.61.11 dev indexer-eth0 lladdr 02:00:17:d5:00:0b DELAY
+[exit 0]
+$ indexer ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.123 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.123/0.123/0.123/0.000 ms
+[exit 0]
+$ indexer ip neigh show 10.1.61.12
+10.1.61.12 dev indexer-eth0 lladdr 02:00:17:d5:00:0c DELAY
+[exit 0]
+$ ingest ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.092 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.092/0.092/0.092/0.000 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.11
+10.1.61.11 dev ingest-eth0 lladdr 02:00:18:39:00:0b REACHABLE
+[exit 0]
+$ ingest ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.355 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.355/0.355/0.355/0.000 ms
+[exit 0]
+$ ingest ip neigh show 10.1.61.12
+10.1.61.12 dev ingest-eth0 lladdr 02:00:18:39:00:0c REACHABLE
+[exit 0]
+$ archive ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.088 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.088/0.088/0.088/0.000 ms
+[exit 0]
+$ archive ip neigh show 10.1.61.10
+10.1.61.10 dev archive-eth0 lladdr 02:00:18:39:00:0a DELAY
+[exit 0]
+$ archive ping -c 1 -W 1 10.1.61.12
+PING 10.1.61.12 (10.1.61.12) 56(84) bytes of data.
+64 bytes from 10.1.61.12: icmp_seq=1 ttl=64 time=0.144 ms
+
+--- 10.1.61.12 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.144/0.144/0.144/0.000 ms
+[exit 0]
+$ archive ip neigh show 10.1.61.12
+10.1.61.12 dev archive-eth0 lladdr 02:00:18:39:00:0c REACHABLE
+[exit 0]
+$ audit ping -c 1 -W 1 10.1.61.10
+PING 10.1.61.10 (10.1.61.10) 56(84) bytes of data.
+64 bytes from 10.1.61.10: icmp_seq=1 ttl=64 time=0.118 ms
+
+--- 10.1.61.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.118/0.118/0.118/0.000 ms
+[exit 0]
+$ audit ip neigh show 10.1.61.10
+10.1.61.10 dev audit-eth0 lladdr 02:00:18:39:00:0a DELAY
+[exit 0]
+$ audit ping -c 1 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.088 ms
+
+--- 10.1.61.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.088/0.088/0.088/0.000 ms
+[exit 0]
+$ audit ip neigh show 10.1.61.11
+10.1.61.11 dev audit-eth0 lladdr 02:00:18:39:00:0b DELAY
+[exit 0]
+== reverse negative control: .13 exists only in Aster
+$ ingest ping -c 2 -W 1 10.1.61.13
+PING 10.1.61.13 (10.1.61.13) 56(84) bytes of data.
+
+--- 10.1.61.13 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1072ms
+
+[exit 1]
+$ ingest ip neigh show 10.1.61.13
+10.1.61.13 dev ingest-eth0 INCOMPLETE
+[exit 0]

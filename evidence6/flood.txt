@@ -1,0 +1,102 @@
+== overlay.yaml (fresh network)
+VTEP commands on quay (10.1.0.1):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.1 dstport 4789 dev quay-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set quay-eth1 master br6101
+  ip link set quay-eth1 up
+  ip link set quay-eth2 master br6101
+  ip link set quay-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+VTEP commands on ridge (10.1.0.2):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set ridge-eth1 master br6101
+  ip link set ridge-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.3
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.2 dstport 4789 dev ridge-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set ridge-eth2 master br6201
+  ip link set ridge-eth2 up
+  ip link set ridge-eth3 master br6201
+  ip link set ridge-eth3 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.3
+VTEP commands on vale (10.1.0.3):
+  ip link add br6101 type bridge
+  ip link set br6101 up
+  ip link add vxlan6101 type vxlan id 6101 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6101 master br6101
+  ip link set vxlan6101 up
+  ip link set vale-eth1 master br6101
+  ip link set vale-eth1 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.1
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6101 dst 10.1.0.2
+  ip link add br6201 type bridge
+  ip link set br6201 up
+  ip link add vxlan6201 type vxlan id 6201 local 10.1.0.3 dstport 4789 dev vale-eth0
+  ip link set vxlan6201 master br6201
+  ip link set vxlan6201 up
+  ip link set vale-eth2 master br6201
+  ip link set vale-eth2 up
+  bridge fdb append 00:00:00:00:00:00 dev vxlan6201 dst 10.1.0.2
+== quay before the first probe
+$ quay bridge fdb show dev vxlan6101
+ba:3b:8a:a4:94:c2 vlan 1 master br6101 permanent
+ba:3b:8a:a4:94:c2 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+[exit 0]
+== off-path capture on vale during the first ARP/ICMP exchange
+$ vale timeout -s INT 4 tcpdump -l -nnei vale-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on vale-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ catalog ping -c 2 -W 1 10.1.61.11
+PING 10.1.61.11 (10.1.61.11) 56(84) bytes of data.
+64 bytes from 10.1.61.11: icmp_seq=1 ttl=64 time=0.317 ms
+64 bytes from 10.1.61.11: icmp_seq=2 ttl=64 time=0.161 ms
+
+--- 10.1.61.11 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1060ms
+rtt min/avg/max/mdev = 0.161/0.239/0.317/0.078 ms
+[exit 0]
+05:50:48.303545 5a:1f:39:32:25:6e > 46:4b:b2:ff:1e:6a, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 > 10.1.0.3.4789: VXLAN, flags [I] (0x08), vni 6101
+02:00:17:d5:00:0a > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.61.11 tell 10.1.61.10, length 28
+
+1 packet captured
+1 packet received by filter
+0 packets dropped by kernel
+== VTEP FDBs after the probe
+$ quay bridge fdb show dev vxlan6101
+02:00:17:d5:00:0b master br6101
+ba:3b:8a:a4:94:c2 vlan 1 master br6101 permanent
+ba:3b:8a:a4:94:c2 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+02:00:17:d5:00:0b dst 10.1.0.2 self
+[exit 0]
+$ ridge bridge fdb show dev vxlan6101
+02:00:17:d5:00:0a master br6101
+5e:64:35:3c:ce:f8 vlan 1 master br6101 permanent
+5e:64:35:3c:ce:f8 master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.1 self permanent
+00:00:00:00:00:00 dst 10.1.0.3 self permanent
+02:00:17:d5:00:0a dst 10.1.0.1 self
+[exit 0]
+$ vale bridge fdb show dev vxlan6101
+02:00:17:d5:00:0a master br6101
+66:81:de:bd:dd:8f vlan 1 master br6101 permanent
+66:81:de:bd:dd:8f master br6101 permanent
+00:00:00:00:00:00 dst 10.1.0.1 self permanent
+00:00:00:00:00:00 dst 10.1.0.2 self permanent
+02:00:17:d5:00:0a dst 10.1.0.1 self
+[exit 0]

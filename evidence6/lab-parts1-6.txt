@@ -1,0 +1,465 @@
+== Part 1: Mininet hosts, namespace PIDs and veth peers
+*** Error setting resource limits. Mininet's performance may be affected.
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-arptables = 1
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-iptables = 1
+Warning: Linux bridge may not work with net.bridge.bridge-nf-call-ip6tables = 1
+h1 Mininet shell PID 18
+$ h1 ip -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+h1-eth0@if2      UP             00:00:00:00:00:01 <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+h2 Mininet shell PID 20
+$ h2 ip -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+h2-eth0@if3      UP             00:00:00:00:00:02 <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ lsns -t net -o NS,PID,COMMAND
+        NS PID COMMAND
+4026532604   1 python3 -u run_lab6.py
+4026532713  18 ├─bash --norc --noediting -is mininet:h1
+4026532773  20 └─bash --norc --noediting -is mininet:h2
+$ ip -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+s1-eth1@if2      UNKNOWN        12:e4:67:d7:3a:f6 <BROADCAST,MULTICAST,UP,LOWER_UP>
+s1-eth2@if2      UP             5e:8b:13:b9:a7:26 <BROADCAST,MULTICAST,UP,LOWER_UP>
+s1               UNKNOWN        12:e4:67:d7:3a:f6 <BROADCAST,MULTICAST,UP,LOWER_UP>
+== Part 2: manual namespaces, veth and bridge
+$ ip netns add red
+$ ip link add veth-red type veth peer name red-br
+$ ip link set veth-red netns red
+$ ip -n red addr add 10.1.9.1/24 dev veth-red
+$ ip -n red link set veth-red up
+$ ip netns add blue
+$ ip link add veth-blue type veth peer name blue-br
+$ ip link set veth-blue netns blue
+$ ip -n blue addr add 10.1.9.2/24 dev veth-blue
+$ ip -n blue link set veth-blue up
+$ ip link add br0 type bridge
+$ ip link set br0 up
+$ ip link set red-br master br0
+$ ip link set red-br up
+$ ip link set blue-br master br0
+$ ip link set blue-br up
+$ ip netns exec red ping -c 2 -W 1 10.1.9.2
+PING 10.1.9.2 (10.1.9.2) 56(84) bytes of data.
+64 bytes from 10.1.9.2: icmp_seq=1 ttl=64 time=0.203 ms
+64 bytes from 10.1.9.2: icmp_seq=2 ttl=64 time=0.066 ms
+
+--- 10.1.9.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1059ms
+rtt min/avg/max/mdev = 0.066/0.134/0.203/0.068 ms
+$ bridge fdb show br br0
+f2:e3:4a:20:06:28 dev red-br master br0
+ee:7c:bf:a4:08:69 dev red-br vlan 1 master br0 permanent
+ee:7c:bf:a4:08:69 dev red-br master br0 permanent
+33:33:00:00:00:01 dev red-br self permanent
+01:00:5e:00:00:01 dev red-br self permanent
+33:33:ff:a4:08:69 dev red-br self permanent
+42:b9:2f:a1:b3:14 dev blue-br master br0
+16:ec:52:3a:17:f7 dev blue-br vlan 1 master br0 permanent
+16:ec:52:3a:17:f7 dev blue-br master br0 permanent
+33:33:00:00:00:01 dev blue-br self permanent
+01:00:5e:00:00:01 dev blue-br self permanent
+33:33:ff:3a:17:f7 dev blue-br self permanent
+33:33:00:00:00:01 dev br0 self permanent
+01:00:5e:00:00:6a dev br0 self permanent
+33:33:00:00:00:6a dev br0 self permanent
+01:00:5e:00:00:01 dev br0 self permanent
+33:33:ff:ac:89:ee dev br0 self permanent
+$ ip netns del red
+$ ip netns del blue
+$ ip link del br0
+== Parts 3 and 4: IPv4 underlay and VXLAN
+$ h1 ip link add vxlan100 type vxlan id 100 local 10.1.0.1 remote 10.1.0.2 dstport 4789 dev h1-eth0
+
+[exit 0]
+$ h1 ip addr add 10.1.100.1/24 dev vxlan100
+
+[exit 0]
+$ h1 ip link set vxlan100 up
+
+[exit 0]
+$ h2 ip link add vxlan100 type vxlan id 100 local 10.1.0.2 remote 10.1.0.1 dstport 4789 dev h2-eth0
+
+[exit 0]
+$ h2 ip addr add 10.1.100.2/24 dev vxlan100
+
+[exit 0]
+$ h2 ip link set vxlan100 up
+
+[exit 0]
+$ h2 timeout -s INT 4 tcpdump -l -nnei h2-eth0 udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on h2-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ h1 ping -c 2 -W 1 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 56(84) bytes of data.
+64 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.276 ms
+64 bytes from 10.1.100.2: icmp_seq=2 ttl=64 time=0.087 ms
+
+--- 10.1.100.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1020ms
+rtt min/avg/max/mdev = 0.087/0.181/0.276/0.094 ms
+[exit 0]
+05:48:16.596421 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 92: 10.1.0.1.44237 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.100.2 tell 10.1.100.1, length 28
+05:48:16.596471 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 92: 10.1.0.2.44237 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > ea:7d:fa:41:d4:5d, ethertype ARP (0x0806), length 42: Reply 10.1.100.2 is-at 32:58:8e:5e:b4:bf, length 28
+05:48:16.596537 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 148: 10.1.0.1.49265 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 32:58:8e:5e:b4:bf, ethertype IPv4 (0x0800), length 98: 10.1.100.1 > 10.1.100.2: ICMP echo request, id 152, seq 1, length 64
+05:48:16.596558 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 148: 10.1.0.2.49265 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > ea:7d:fa:41:d4:5d, ethertype IPv4 (0x0800), length 98: 10.1.100.2 > 10.1.100.1: ICMP echo reply, id 152, seq 1, length 64
+05:48:17.026441 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 136: 10.1.0.1.39703 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 33:33:ff:41:d4:5d, ethertype IPv6 (0x86dd), length 86: :: > ff02::1:ff41:d45d: ICMP6, neighbor solicitation, who has fe80::e87d:faff:fe41:d45d, length 32
+05:48:17.026816 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 140: 10.1.0.2.59373 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: :: > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:17.296430 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 136: 10.1.0.2.44706 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > 33:33:ff:5e:b4:bf, ethertype IPv6 (0x86dd), length 86: :: > ff02::1:ff5e:b4bf: ICMP6, neighbor solicitation, who has fe80::3058:8eff:fe5e:b4bf, length 32
+05:48:17.296444 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 140: 10.1.0.1.59373 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: :: > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:17.616492 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 148: 10.1.0.1.49265 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 32:58:8e:5e:b4:bf, ethertype IPv4 (0x0800), length 98: 10.1.100.1 > 10.1.100.2: ICMP echo request, id 152, seq 2, length 64
+05:48:17.616530 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 148: 10.1.0.2.49265 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > ea:7d:fa:41:d4:5d, ethertype IPv4 (0x0800), length 98: 10.1.100.2 > 10.1.100.1: ICMP echo reply, id 152, seq 2, length 64
+05:48:18.096860 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 140: 10.1.0.1.35247 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::e87d:faff:fe41:d45d > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:18.096887 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 120: 10.1.0.1.57345 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 33:33:00:00:00:02, ethertype IPv6 (0x86dd), length 70: fe80::e87d:faff:fe41:d45d > ff02::2: ICMP6, router solicitation, length 16
+05:48:18.336523 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 140: 10.1.0.2.37716 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::3058:8eff:fe5e:b4bf > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:18.336548 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 120: 10.1.0.2.52184 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > 33:33:00:00:00:02, ethertype IPv6 (0x86dd), length 70: fe80::3058:8eff:fe5e:b4bf > ff02::2: ICMP6, router solicitation, length 16
+05:48:19.056501 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv4 (0x0800), length 140: 10.1.0.1.35247 > 10.1.0.2.4789: VXLAN, flags [I] (0x08), vni 100
+ea:7d:fa:41:d4:5d > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::e87d:faff:fe41:d45d > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:19.216535 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv4 (0x0800), length 140: 10.1.0.2.37716 > 10.1.0.1.4789: VXLAN, flags [I] (0x08), vni 100
+32:58:8e:5e:b4:bf > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::3058:8eff:fe5e:b4bf > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+
+16 packets captured
+16 packets received by filter
+0 packets dropped by kernel
+$ h1 ip -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+h1-eth0@if10     UP             00:00:00:00:00:01 <BROADCAST,MULTICAST,UP,LOWER_UP>
+vxlan100         UNKNOWN        ea:7d:fa:41:d4:5d <BROADCAST,MULTICAST,UP,LOWER_UP>
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1472 10.1.0.2
+PING 10.1.0.2 (10.1.0.2) 1472(1500) bytes of data.
+1480 bytes from 10.1.0.2: icmp_seq=1 ttl=64 time=0.046 ms
+
+--- 10.1.0.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.046/0.046/0.046/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1473 10.1.0.2
+PING 10.1.0.2 (10.1.0.2) 1473(1501) bytes of data.
+
+--- 10.1.0.2 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1500
+[exit 1]
+$ h1 ping -M do -c 1 -W 1 -s 1422 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1422(1450) bytes of data.
+1430 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.064 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.064/0.064/0.064/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1423 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1423(1451) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1450
+[exit 1]
+$ h2 iperf3 -s -D
+
+[exit 0]
+$ h1 timeout 12 iperf3 -c 10.1.0.2 -t 5
+Connecting to host 10.1.0.2, port 5201
+[  7] local 10.1.0.1 port 38344 connected to 10.1.0.2 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  3.14 GBytes  26.9 Gbits/sec  462   1.25 MBytes
+[  7]   1.00-2.00   sec  3.11 GBytes  26.7 Gbits/sec  358   1.26 MBytes
+[  7]   2.00-3.00   sec  2.99 GBytes  25.7 Gbits/sec    2   1.26 MBytes
+[  7]   3.00-4.00   sec  3.08 GBytes  26.5 Gbits/sec    0   1.26 MBytes
+[  7]   4.00-5.00   sec  3.15 GBytes  27.1 Gbits/sec    1   1.27 MBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  15.5 GBytes  26.6 Gbits/sec  823             sender
+[  7]   0.00-5.00   sec  15.5 GBytes  26.6 Gbits/sec                  receiver
+
+iperf Done.
+[exit 0]
+$ h1 timeout 12 iperf3 -c 10.1.100.2 -t 5
+Connecting to host 10.1.100.2, port 5201
+[  7] local 10.1.100.1 port 48566 connected to 10.1.100.2 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  1.81 GBytes  15.5 Gbits/sec    0   1.15 MBytes
+[  7]   1.00-2.00   sec  1.75 GBytes  15.0 Gbits/sec    1   1.21 MBytes
+[  7]   2.00-3.00   sec  1.71 GBytes  14.7 Gbits/sec  682    867 KBytes
+[  7]   3.00-4.00   sec  1.78 GBytes  15.3 Gbits/sec    3    871 KBytes
+[  7]   4.00-5.00   sec  1.81 GBytes  15.5 Gbits/sec    2    886 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  8.88 GBytes  15.3 Gbits/sec  688             sender
+[  7]   0.00-5.00   sec  8.88 GBytes  15.2 Gbits/sec                  receiver
+
+iperf Done.
+[exit 0]
+== Part 5: IPv6 underlay with an IPv4 overlay
+$ h1 ip -6 addr add fd00:6101::1/64 dev h1-eth0
+
+[exit 0]
+$ h2 ip -6 addr add fd00:6101::2/64 dev h2-eth0
+
+[exit 0]
+$ h1 ping -6 -c 2 -W 1 fd00:6101::2
+PING fd00:6101::2 (fd00:6101::2) 56 data bytes
+64 bytes from fd00:6101::2: icmp_seq=1 ttl=64 time=0.150 ms
+64 bytes from fd00:6101::2: icmp_seq=2 ttl=64 time=0.140 ms
+
+--- fd00:6101::2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1006ms
+rtt min/avg/max/mdev = 0.140/0.145/0.150/0.005 ms
+[exit 0]
+$ h1 ip link add vxlan106 type vxlan id 106 local fd00:6101::1 remote fd00:6101::2 dstport 4789 dev h1-eth0
+
+[exit 0]
+$ h1 ip addr add 10.1.106.1/24 dev vxlan106
+
+[exit 0]
+$ h1 ip link set vxlan106 up
+
+[exit 0]
+$ h2 ip link add vxlan106 type vxlan id 106 local fd00:6101::2 remote fd00:6101::1 dstport 4789 dev h2-eth0
+
+[exit 0]
+$ h2 ip addr add 10.1.106.2/24 dev vxlan106
+
+[exit 0]
+$ h2 ip link set vxlan106 up
+
+[exit 0]
+$ h2 timeout -s INT 4 tcpdump -l -nnei h2-eth0 ip6 and udp port 4789 [capture started before probe]
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on h2-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+$ h1 ping -M do -c 1 -W 1 -s 1402 10.1.106.2
+PING 10.1.106.2 (10.1.106.2) 1402(1430) bytes of data.
+1410 bytes from 10.1.106.2: icmp_seq=1 ttl=64 time=0.156 ms
+
+--- 10.1.106.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.156/0.156/0.156/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1403 10.1.106.2
+PING 10.1.106.2 (10.1.106.2) 1403(1431) bytes of data.
+
+--- 10.1.106.2 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+ping: local error: message too long, mtu=1430
+[exit 1]
+05:48:35.766882 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv6 (0x86dd), length 112: fd00:6101::1.44237 > fd00:6101::2.4789: VXLAN, flags [I] (0x08), vni 106
+62:46:03:86:d6:ce > ff:ff:ff:ff:ff:ff, ethertype ARP (0x0806), length 42: Request who-has 10.1.106.2 tell 10.1.106.1, length 28
+05:48:35.766924 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 112: fd00:6101::2.44237 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 62:46:03:86:d6:ce, ethertype ARP (0x0806), length 42: Reply 10.1.106.2 is-at 9e:ce:4b:91:a4:fd, length 28
+05:48:35.766949 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv6 (0x86dd), length 1514: fd00:6101::1.48734 > fd00:6101::2.4789: VXLAN, flags [I] (0x08), vni 106
+62:46:03:86:d6:ce > 9e:ce:4b:91:a4:fd, ethertype IPv4 (0x0800), length 1444: 10.1.106.1 > 10.1.106.2: ICMP echo request, id 199, seq 1, length 1410
+05:48:35.766972 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 1514: fd00:6101::2.48734 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 62:46:03:86:d6:ce, ethertype IPv4 (0x0800), length 1444: 10.1.106.2 > 10.1.106.1: ICMP echo reply, id 199, seq 1, length 1410
+05:48:35.834081 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 156: fd00:6101::2.46528 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 33:33:ff:91:a4:fd, ethertype IPv6 (0x86dd), length 86: :: > ff02::1:ff91:a4fd: ICMP6, neighbor solicitation, who has fe80::9cce:4bff:fe91:a4fd, length 32
+05:48:35.884001 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 160: fd00:6101::2.59373 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: :: > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:36.574046 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv6 (0x86dd), length 160: fd00:6101::1.47116 > fd00:6101::2.4789: VXLAN, flags [I] (0x08), vni 106
+62:46:03:86:d6:ce > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::6046:3ff:fe86:d6ce > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:36.574085 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv6 (0x86dd), length 140: fd00:6101::1.54028 > fd00:6101::2.4789: VXLAN, flags [I] (0x08), vni 106
+62:46:03:86:d6:ce > 33:33:00:00:00:02, ethertype IPv6 (0x86dd), length 70: fe80::6046:3ff:fe86:d6ce > ff02::2: ICMP6, router solicitation, length 16
+05:48:36.893988 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 160: fd00:6101::2.58864 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::9cce:4bff:fe91:a4fd > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:36.894027 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 140: fd00:6101::2.42463 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 33:33:00:00:00:02, ethertype IPv6 (0x86dd), length 70: fe80::9cce:4bff:fe91:a4fd > ff02::2: ICMP6, router solicitation, length 16
+05:48:37.024005 00:00:00:00:00:02 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 160: fd00:6101::2.58864 > fd00:6101::1.4789: VXLAN, flags [I] (0x08), vni 106
+9e:ce:4b:91:a4:fd > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::9cce:4bff:fe91:a4fd > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+05:48:37.034028 00:00:00:00:00:01 > 00:00:00:00:00:02, ethertype IPv6 (0x86dd), length 160: fd00:6101::1.47116 > fd00:6101::2.4789: VXLAN, flags [I] (0x08), vni 106
+62:46:03:86:d6:ce > 33:33:00:00:00:16, ethertype IPv6 (0x86dd), length 90: fe80::6046:3ff:fe86:d6ce > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+
+12 packets captured
+12 packets received by filter
+0 packets dropped by kernel
+$ h1 ip -d link show dev vxlan106
+4: vxlan106: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1430 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 62:46:03:86:d6:ce brd ff:ff:ff:ff:ff:ff promiscuity 0 minmtu 68 maxmtu 65535
+    vxlan id 106 remote fd00:6101::2 local fd00:6101::1 dev h1-eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535
+info: Using default fan map value (33)
+[exit 0]
+== Part 6: lower only the receiving underlay MTU
+$ h2 ip link set h2-eth0 mtu 1400
+
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 56 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 56(84) bytes of data.
+64 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.068 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.068/0.068/0.068/0.000 ms
+[exit 0]
+$ s1 cat /sys/class/net/s1-eth2/statistics/tx_dropped
+0
+[exit 0]
+$ h2 cat /sys/class/net/h2-eth0/statistics/rx_dropped
+0
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1400 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1400(1428) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ s1 cat /sys/class/net/s1-eth2/statistics/tx_dropped
+1
+[exit 0]
+$ h2 cat /sys/class/net/h2-eth0/statistics/rx_dropped
+1
+[exit 0]
+$ h1 timeout 12 iperf3 -c 10.1.100.2 -t 5
+Connecting to host 10.1.100.2, port 5201
+[  7] local 10.1.100.1 port 37834 connected to 10.1.100.2 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  2.00 MBytes  16.8 Mbits/sec    3   1.37 KBytes
+[  7]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.37 KBytes
+[  7]   2.00-3.00   sec  0.00 Bytes  0.00 bits/sec    0   1.37 KBytes
+[  7]   3.00-4.00   sec  0.00 Bytes  0.00 bits/sec    1   1.37 KBytes
+[  7]   4.00-5.00   sec  0.00 Bytes  0.00 bits/sec    0   1.37 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  2.00 MBytes  3.35 Mbits/sec    5             sender
+[  7]   0.00-5.00   sec  1.75 MBytes  2.93 Mbits/sec                  receiver
+
+iperf Done.
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 728 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 728(756) bytes of data.
+736 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.061 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.061/0.061/0.061/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1064 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1064(1092) bytes of data.
+1072 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.060 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.060/0.060/0.060/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1232 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1232(1260) bytes of data.
+1240 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.075 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.075/0.075/0.075/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1316 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1316(1344) bytes of data.
+1324 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.235 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.235/0.235/0.235/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1358 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1358(1386) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ h1 ping -M do -c 1 -W 1 -s 1337 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1337(1365) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ h1 ping -M do -c 1 -W 1 -s 1326 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1326(1354) bytes of data.
+1334 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.885 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.885/0.885/0.885/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1331 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1331(1359) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ h1 ping -M do -c 1 -W 1 -s 1328 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1328(1356) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ h1 ping -M do -c 1 -W 1 -s 1327 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1327(1355) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+== measured mismatch boundary: 1326 passes, 1327 fails
+$ h1 ping -M do -c 1 -W 1 -s 1326 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1326(1354) bytes of data.
+1334 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.078 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.078/0.078/0.078/0.000 ms
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1327 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1327(1355) bytes of data.
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+[exit 1]
+$ h1 ip link set vxlan100 mtu 1500
+RTNETLINK answers: Invalid argument
+[exit 2]
+$ h2 ip link set h2-eth0 mtu 1500
+
+[exit 0]
+$ h1 ping -M do -c 1 -W 1 -s 1400 10.1.100.2
+PING 10.1.100.2 (10.1.100.2) 1400(1428) bytes of data.
+1408 bytes from 10.1.100.2: icmp_seq=1 ttl=64 time=0.081 ms
+
+--- 10.1.100.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.081/0.081/0.081/0.000 ms
+[exit 0]
+$ h1 timeout 12 iperf3 -c 10.1.100.2 -t 5
+Connecting to host 10.1.100.2, port 5201
+[  7] local 10.1.100.1 port 54702 connected to 10.1.100.2 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  7]   0.00-1.00   sec  2.17 GBytes  18.6 Gbits/sec  302    963 KBytes
+[  7]   1.00-2.00   sec  2.30 GBytes  19.7 Gbits/sec    3    963 KBytes
+[  7]   2.00-3.00   sec  2.27 GBytes  19.5 Gbits/sec    2    963 KBytes
+[  7]   3.00-4.00   sec  2.32 GBytes  20.0 Gbits/sec    0    963 KBytes
+[  7]   4.00-5.00   sec  2.26 GBytes  19.4 Gbits/sec    0    963 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  7]   0.00-5.00   sec  11.3 GBytes  19.5 Gbits/sec  307             sender
+[  7]   0.00-5.00   sec  11.3 GBytes  19.5 Gbits/sec                  receiver
+
+iperf Done.
+[exit 0]
