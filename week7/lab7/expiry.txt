@@ -1,0 +1,21 @@
+$ python3 inventory.py (--token-ttl 5 --rate 2)
+logged in as netops
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 401 token expired: log in again; logging in again
+logged in as netops
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 401 token expired: log in again; logging in again
+logged in as netops
+201 devices read (the API says 201), in 36 requests; saved devices.json
+  johor: 50
+  kl-hq: 51
+  penang: 50
+  pj-dc: 50

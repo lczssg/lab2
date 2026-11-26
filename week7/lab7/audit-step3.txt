@@ -1,0 +1,110 @@
+
+$ curl -i -X PUT $BASE/vlans/30 with {"name":"guests"}
+HTTP/1.1 201 Created
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:07 GMT
+Content-Type: application/json
+Content-Length: 35
+Location: /api/v1/vlans/30
+
+$ curl -i -X PUT $BASE/vlans/30 with {"name":"guests"}
+HTTP/1.1 200 OK
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:07 GMT
+Content-Type: application/json
+Content-Length: 35
+
+$ curl -i -X DELETE $BASE/vlans/99
+HTTP/1.1 204 No Content
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:07 GMT
+Content-Length: 0
+
+$ curl -i -X DELETE $BASE/vlans/99
+HTTP/1.1 404 Not Found
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:07 GMT
+Content-Type: application/json
+Content-Length: 35
+
+ACL POST body {"action":"deny","src":"10.1.30.0/24","dst":"10.1.20.0/24","protocol":"tcp","port":22,"description":"guests-no-ssh"}
+
+$ curl -i -X POST $BASE/acl/entries
+HTTP/1.1 201 Created
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:08 GMT
+Content-Type: application/json
+Content-Length: 153
+Location: /api/v1/acl/entries/1
+
+$ curl -i -X POST $BASE/acl/entries
+HTTP/1.1 201 Created
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:08 GMT
+Content-Type: application/json
+Content-Length: 153
+Location: /api/v1/acl/entries/2
+
+$ curl -i -X POST $BASE/acl/entries -H "Idempotency-Key: guests-no-ssh-1"
+HTTP/1.1 201 Created
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:08 GMT
+Content-Type: application/json
+Content-Length: 153
+Location: /api/v1/acl/entries/3
+
+$ curl -i -X POST $BASE/acl/entries -H "Idempotency-Key: guests-no-ssh-1"
+HTTP/1.1 201 Created
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:08 GMT
+Content-Type: application/json
+Content-Length: 153
+Location: /api/v1/acl/entries/3
+Idempotent-Replayed: true
+
+$ curl $BASE/lab/audit
+{
+  "writes": 5,
+  "items": [
+    {
+      "seq": 1,
+      "time": "07:21:07",
+      "method": "PUT",
+      "path": "/api/v1/vlans/30",
+      "status": 201,
+      "change": "created VLAN 30 guests"
+    },
+    {
+      "seq": 2,
+      "time": "07:21:07",
+      "method": "DELETE",
+      "path": "/api/v1/vlans/99",
+      "status": 204,
+      "change": "deleted VLAN 99"
+    },
+    {
+      "seq": 3,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 1: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 4,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 2: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 5,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 3: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    }
+  ]
+}

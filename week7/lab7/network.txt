@@ -1,0 +1,3 @@
+apilab driver=bridge subnet=172.19.0.0/16
+wic2005-week7-client 172.19.0.3/16
+wic2005-week7-api 172.19.0.2/16

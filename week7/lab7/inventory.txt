@@ -1,0 +1,20 @@
+$ PUT /lab/chaos {"errors_503":0.2}
+{
+  "lose_responses": 0.0,
+  "errors_503": 0.2
+}
+$ python3 inventory.py
+logged in as netops
+GET /api/v1/devices: 503 Service Unavailable; retrying in 1.15s
+GET /api/v1/devices: 503 Service Unavailable; retrying in 2.17s
+GET /api/v1/devices: 503 Service Unavailable; retrying in 4.18s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 429; waiting Retry-After 1s
+GET /api/v1/devices: 503 Service Unavailable; retrying in 1.10s
+GET /api/v1/devices: 503 Service Unavailable; retrying in 1.21s
+201 devices read (the API says 201), in 29 requests; saved devices.json
+  johor: 50
+  kl-hq: 51
+  penang: 50
+  pj-dc: 50
+Verified 201 unique device names, all on 10.1.0.0/16

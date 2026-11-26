@@ -1,0 +1,33 @@
+Lab API for student …6101: 201 devices on 10.1.0.0/16, tokens last 600s, 5 requests/s per token. Listening on port 8000.
+
+Audit before sync: 0 writes
+$ python3 sync.py intent.yaml --dry-run
+logged in as netops
+Plan: 11 writes
+  rename VLAN: PUT /api/v1/vlans/10 {"name": "editing-stations"}
+  rename VLAN: PUT /api/v1/vlans/20 {"name": "media-services"}
+  create VLAN: PUT /api/v1/vlans/30 {"name": "workshop-guests"}
+  create VLAN: PUT /api/v1/vlans/44 {"name": "capture-studios"}
+  create VLAN: PUT /api/v1/vlans/53 {"name": "core-dns"}
+  create VLAN: PUT /api/v1/vlans/70 {"name": "equipment-admin"}
+  delete VLAN: DELETE /api/v1/vlans/99
+  append ACL entry: POST /api/v1/acl/entries {"action": "deny", "src": "10.1.30.0/24", "dst": "10.1.70.0/24", "protocol": "any", "port": null, "description": "guests-blocked-from-admin"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.10.0/24", "dst": "10.1.20.0/24", "protocol": "tcp", "port": 443, "description": "editors-to-media-portal"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.44.0/24", "dst": "10.1.53.0/24", "protocol": "udp", "port": 53, "description": "studios-to-dns"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.70.0/24", "dst": "10.1.44.0/24", "protocol": "tcp", "port": 22, "description": "admins-to-capture-hosts"}
+Dry run: no resource writes sent.
+
+$ GET /api/v1/lab/audit
+{
+  "writes": 0,
+  "items": []
+}
+Audit delta: 0
+
+API request log during this case:
+07:24:26 172.19.0.3 "GET /api/v1/lab/audit HTTP/1.1" 200 -
+07:24:26 172.19.0.3 "POST /api/v1/auth/token HTTP/1.1" 200 -
+07:24:26 172.19.0.3 "GET /api/v1/vlans HTTP/1.1" 200 -
+07:24:26 172.19.0.3 "GET /api/v1/acl/entries HTTP/1.1" 200 -
+07:24:26 172.19.0.3 "GET /api/v1/lab/audit HTTP/1.1" 200 -
+Resource write requests in this log: 0

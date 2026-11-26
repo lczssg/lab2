@@ -1,0 +1,146 @@
+$ PUT /lab/chaos {"lose_responses":0.5}
+{
+  "lose_responses": 0.5,
+  "errors_503": 0.0
+}
+
+$ python3 retry_naive.py 6101 (run 1)
+attempt 1: 201 Created: {'id': 4, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit delta 1
+
+$ python3 retry_naive.py 6101 (run 2)
+attempt 1: 201 Created: {'id': 5, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit delta 1
+
+$ python3 retry_naive.py 6101 (run 3)
+attempt 1: 201 Created: {'id': 6, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit delta 1
+
+$ python3 retry_naive.py 6101 (run 4)
+attempt 1: 201 Created: {'id': 7, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit delta 1
+
+$ python3 retry_naive.py 6101 (run 5)
+attempt 1: no response (ConnectionError) — trying again
+attempt 2: 201 Created: {'id': 9, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit delta 2
+{
+  "writes": 11,
+  "items": [
+    {
+      "seq": 1,
+      "time": "07:21:07",
+      "method": "PUT",
+      "path": "/api/v1/vlans/30",
+      "status": 201,
+      "change": "created VLAN 30 guests"
+    },
+    {
+      "seq": 2,
+      "time": "07:21:07",
+      "method": "DELETE",
+      "path": "/api/v1/vlans/99",
+      "status": 204,
+      "change": "deleted VLAN 99"
+    },
+    {
+      "seq": 3,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 1: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 4,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 2: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 5,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 3: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 6,
+      "time": "07:21:08",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 4: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 7,
+      "time": "07:21:09",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 5: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 8,
+      "time": "07:21:11",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 6: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 9,
+      "time": "07:21:12",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 7: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 10,
+      "time": "07:21:13",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 8: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    },
+    {
+      "seq": 11,
+      "time": "07:21:14",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 9: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    }
+  ]
+}
+
+Audit cleared before safe trials.
+
+$ python3 retry_safe.py 6101 (run 1)
+POST /api/v1/acl/entries: no response (ConnectionError); retrying in 1.25s
+POST /api/v1/acl/entries: 201 Idempotent-Replayed: true
+201 Created: {'id': 10, 'action': 'deny', 'src': '10.1.30.0/24', 'dst': '10.1.20.0/24', 'protocol': 'tcp', 'port': 22, 'description': 'guests may not SSH to servers'}
+Mutation audit count 1 (expected 1)
+
+$ curl $BASE/lab/audit
+{
+  "writes": 1,
+  "items": [
+    {
+      "seq": 12,
+      "time": "07:21:14",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 10: deny 10.1.30.0/24 \u2192 10.1.20.0/24 tcp/22"
+    }
+  ]
+}
+{
+  "lose_responses": 0.0,
+  "errors_503": 0.0
+}

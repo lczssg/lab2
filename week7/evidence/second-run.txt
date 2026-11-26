@@ -1,0 +1,124 @@
+Lab API for student …6101: 201 devices on 10.1.0.0/16, tokens last 600s, 5 requests/s per token. Listening on port 8000.
+
+$ GET /api/v1/lab/chaos
+{
+  "lose_responses": 0.3,
+  "errors_503": 0.2
+}
+
+Audit before sync: 11 writes
+$ python3 sync.py intent.yaml
+logged in as netops
+GET /api/v1/vlans: 503 Service Unavailable; retrying in 1.15s
+GET /api/v1/vlans: 503 Service Unavailable; retrying in 2.18s
+Plan: empty (0 writes)
+Verified: state matches intent (6 managed VLANs, 4 ACL entries).
+
+$ GET /api/v1/lab/audit
+{
+  "writes": 11,
+  "items": [
+    {
+      "seq": 1,
+      "time": "07:24:28",
+      "method": "PUT",
+      "path": "/api/v1/vlans/10",
+      "status": 200,
+      "change": "set VLAN 10 editing-stations"
+    },
+    {
+      "seq": 2,
+      "time": "07:24:28",
+      "method": "PUT",
+      "path": "/api/v1/vlans/20",
+      "status": 200,
+      "change": "set VLAN 20 media-services"
+    },
+    {
+      "seq": 3,
+      "time": "07:24:28",
+      "method": "PUT",
+      "path": "/api/v1/vlans/30",
+      "status": 201,
+      "change": "created VLAN 30 workshop-guests"
+    },
+    {
+      "seq": 4,
+      "time": "07:24:29",
+      "method": "PUT",
+      "path": "/api/v1/vlans/44",
+      "status": 201,
+      "change": "created VLAN 44 capture-studios"
+    },
+    {
+      "seq": 5,
+      "time": "07:24:34",
+      "method": "PUT",
+      "path": "/api/v1/vlans/53",
+      "status": 201,
+      "change": "created VLAN 53 core-dns"
+    },
+    {
+      "seq": 6,
+      "time": "07:24:48",
+      "method": "PUT",
+      "path": "/api/v1/vlans/70",
+      "status": 201,
+      "change": "created VLAN 70 equipment-admin"
+    },
+    {
+      "seq": 7,
+      "time": "07:24:48",
+      "method": "DELETE",
+      "path": "/api/v1/vlans/99",
+      "status": 204,
+      "change": "deleted VLAN 99"
+    },
+    {
+      "seq": 8,
+      "time": "07:24:48",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 1: deny 10.1.30.0/24 → 10.1.70.0/24 any"
+    },
+    {
+      "seq": 9,
+      "time": "07:24:48",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 2: permit 10.1.10.0/24 → 10.1.20.0/24 tcp/443"
+    },
+    {
+      "seq": 10,
+      "time": "07:24:49",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 3: permit 10.1.44.0/24 → 10.1.53.0/24 udp/53"
+    },
+    {
+      "seq": 11,
+      "time": "07:24:49",
+      "method": "POST",
+      "path": "/api/v1/acl/entries",
+      "status": 201,
+      "change": "added ACL entry 4: permit 10.1.70.0/24 → 10.1.44.0/24 tcp/22"
+    }
+  ]
+}
+Audit delta: 0
+
+API request log during this case:
+07:24:50 172.19.0.3 "GET /api/v1/lab/chaos HTTP/1.1" 200 -
+07:24:50 172.19.0.3 "GET /api/v1/lab/audit HTTP/1.1" 200 -
+07:24:50 172.19.0.3 "POST /api/v1/auth/token HTTP/1.1" 200 -
+07:24:50 172.19.0.3 "GET /api/v1/vlans HTTP/1.1" 503 -
+07:24:51 172.19.0.3 "GET /api/v1/vlans HTTP/1.1" 503 -
+07:24:53 172.19.0.3 "GET /api/v1/vlans HTTP/1.1" 200 -
+07:24:53 172.19.0.3 "GET /api/v1/acl/entries HTTP/1.1" 200 -
+07:24:53 172.19.0.3 "GET /api/v1/vlans HTTP/1.1" 200 -
+07:24:53 172.19.0.3 "GET /api/v1/acl/entries HTTP/1.1" 200 -
+07:24:53 172.19.0.3 "GET /api/v1/lab/audit HTTP/1.1" 200 -
+Resource write requests in this log: 0

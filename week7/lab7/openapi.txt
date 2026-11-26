@@ -1,0 +1,16 @@
+$ curl http://api:8000/openapi.json
+device limit maximum: 50
+ACL entry methods: GET, DELETE
+A unique key for this change. Retrying with the same key and the same body returns the first result instead of adding the entry again (response header Idempotent-Replayed: true). The same key with a different body is rejected with 422.
+site parameter: {'name': 'site', 'in': 'query', 'schema': {'enum': ['kl-hq', 'pj-dc', 'penang', 'johor']}, 'description': 'Only devices at this site.'}
+
+$ curl -i "$BASE/devices?site=pj-dc&limit=50" -H "Authorization: Bearer $TOKEN"
+HTTP/1.1 200 OK
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:24:24 GMT
+Content-Type: application/json
+Content-Length: 7805
+X-Total-Count: 50
+next: None
+names: sw-pj-dc-001, sw-pj-dc-002, sw-pj-dc-003, sw-pj-dc-004, sw-pj-dc-005, sw-pj-dc-006, sw-pj-dc-007, sw-pj-dc-008, sw-pj-dc-009, sw-pj-dc-010, sw-pj-dc-011, sw-pj-dc-012, sw-pj-dc-013, sw-pj-dc-014, sw-pj-dc-015, sw-pj-dc-016, sw-pj-dc-017, sw-pj-dc-018, sw-pj-dc-019, sw-pj-dc-020, sw-pj-dc-021, sw-pj-dc-022, sw-pj-dc-023, sw-pj-dc-024, sw-pj-dc-025, sw-pj-dc-026, sw-pj-dc-027, sw-pj-dc-028, sw-pj-dc-029, sw-pj-dc-030, sw-pj-dc-031, sw-pj-dc-032, sw-pj-dc-033, sw-pj-dc-034, sw-pj-dc-035, sw-pj-dc-036, sw-pj-dc-037, sw-pj-dc-038, sw-pj-dc-039, sw-pj-dc-040, sw-pj-dc-041, sw-pj-dc-042, sw-pj-dc-043, sw-pj-dc-044, sw-pj-dc-045, sw-pj-dc-046, sw-pj-dc-047, sw-pj-dc-048, sw-pj-dc-049, sw-pj-dc-050
+first and last management IP: 10.1.201.1 10.1.201.50

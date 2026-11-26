@@ -1,0 +1,95 @@
+$ curl http://api:8000/api/v1/
+{
+  "name": "WIC2005 lab API",
+  "version": "v1",
+  "docs": "/openapi.json",
+  "resources": [
+    "/api/v1/vlans",
+    "/api/v1/acl/entries",
+    "/api/v1/devices"
+  ],
+  "login": "POST /api/v1/auth/token"
+}
+
+$ curl -i $BASE/vlans
+HTTP/1.1 401 Unauthorized
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:04 GMT
+Content-Type: application/json
+Content-Length: 119
+WWW-Authenticate: Bearer realm="labapi"
+
+$ curl -i $BASE/vlans -H "Authorization: Bearer $TOKEN"
+HTTP/1.1 200 OK
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:04 GMT
+Content-Type: application/json
+Content-Length: 247
+
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "default"
+    },
+    {
+      "id": 10,
+      "name": "users"
+    },
+    {
+      "id": 20,
+      "name": "servers"
+    },
+    {
+      "id": 99,
+      "name": "old-guest"
+    }
+  ],
+  "next": null
+}
+
+$ curl -i $BASE/vlans/77 with netops bearer
+HTTP/1.1 404 Not Found
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 35
+
+$ curl -i -X POST $BASE/vlans/10 with netops bearer
+HTTP/1.1 405 Method Not Allowed
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 54
+Allow: GET, PUT, PATCH, DELETE
+
+$ curl -i -X POST $BASE/vlans with {"id": 30, "name": guest} and netops bearer
+HTTP/1.1 400 Bad Request
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 52
+
+$ curl -i -X PUT $BASE/vlans/5000 with {"name": "invalid"} and netops bearer
+HTTP/1.1 422 Unprocessable Entity
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 57
+
+$ curl -i -X POST $BASE/vlans with {"id": 10, "name": "users"} and netops bearer
+HTTP/1.1 409 Conflict
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 63
+
+$ curl -i -X PUT $BASE/vlans/30 with {"name": "guests"} and viewer bearer
+HTTP/1.1 403 Forbidden
+Server: labapi/1.0 Python/3.12.16
+Date: Thu, 26 Nov 2026 07:21:05 GMT
+Content-Type: application/json
+Content-Length: 46
+
+$ Ten consecutive curl GETs of $BASE/vlans with the same bearer
+200 200 200 200 200 429 429 429 429 429
