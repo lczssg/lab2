@@ -39,10 +39,13 @@ class Client:
 
     def request(self, method, url, *, body=None, key=None):
         """Send a lab resource request and retry only operations with safe effects."""
-        if urlsplit(url)[:2] != urlsplit(API)[:2]:
+        target = urlsplit(url)
+        if target[:2] != urlsplit(API)[:2]:
             raise ValueError("resource URL points outside LAB_API_URL")
-        if method not in {"GET", "PUT", "DELETE"} and (method != "POST" or not key):
+        keyed_acl_post = method == "POST" and target.path == "/api/v1/acl/entries" and key
+        if method not in {"GET", "PUT", "DELETE"} and not keyed_acl_post:
             raise ValueError(f"{method} requires a safe retry strategy")
+        label = f"{method} {target.path}"
         if self.token is None:
             self.login()
         transient_errors = 0
@@ -51,7 +54,6 @@ class Client:
             if key:
                 headers["Idempotency-Key"] = key
             self.requests += 1
-            label = f"{method} {urlsplit(url).path}"
             try:
                 r = requests.request(method, url, json=body, headers=headers,
                                      timeout=5, allow_redirects=False)
