@@ -29,31 +29,33 @@ def to_json(intent):
     Copy the values across as they are, even wrong ones: a VLAN 4095 in the YAML must reach
     yanglint as 4095, so that your model is what rejects it.
     """
-    # TODO: build and return the JSON your module expects. The top-level name carries the module
-    # name, as in the lab's example-vlans data: {"wic2005-intent:...": {...}}. Use the node names
-    # from your own module (pyang -f tree shows them).
-    raise NotImplementedError("to_json() isn't written yet")
+    return {"wic2005-intent:intent": intent}
 
 
-def validate(path, emit=None):
-    """(ok, message). Writes the JSON to `emit` first, valid or not, when asked to."""
+_UNLOADED = object()
+
+
+def validate(path, emit=None, *, intent=_UNLOADED):
+    """Return (ok, message) and optionally write the exact JSON checked."""
     try:
-        intent = yaml.safe_load(pathlib.Path(path).read_text()) or {}
-    except (OSError, yaml.YAMLError) as e:
-        return False, f"can't read {path}: {e}"
-    if not isinstance(intent, dict):
-        return False, f"{path} isn't a YAML mapping"
-    data = json.dumps(to_json(intent), indent=2)
-    if emit:
-        pathlib.Path(emit).write_text(data + "\n")
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        f.write(data)
-    try:
-        p = subprocess.run(["yanglint", "-t", "config", str(MODULE), f.name], capture_output=True, text=True)
-    finally:
-        pathlib.Path(f.name).unlink()
-    lines = [line for line in (p.stdout + p.stderr).splitlines() if not line.startswith("YANGLINT[E]")]
-    return p.returncode == 0, "\n".join(lines).strip()
+        if intent is _UNLOADED:
+            intent = yaml.safe_load(pathlib.Path(path).read_text(encoding="utf-8"))
+        data = json.dumps(to_json(intent), indent=2, allow_nan=False)
+        if emit:
+            pathlib.Path(emit).write_text(data + "\n", encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            json_file = pathlib.Path(tmp) / "intent.json"
+            json_file.write_text(data, encoding="utf-8")
+            p = subprocess.run(
+                ["yanglint", "-t", "config", str(MODULE), str(json_file)],
+                capture_output=True,
+                text=True,
+            )
+    except (OSError, ValueError, TypeError, yaml.YAMLError) as e:
+        return False, str(e)
+    lines = (p.stdout + p.stderr).splitlines()
+    diagnostics = [line for line in lines if not line.startswith("YANGLINT[E]")]
+    return p.returncode == 0, "\n".join(diagnostics or lines).strip()
 
 
 def main():

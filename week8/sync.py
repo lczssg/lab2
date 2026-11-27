@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Reconcile the Week 7 lab VLANs and ordered ACL entries with one intent file."""
+"""Reconcile the lab VLANs and ordered ACL entries with one intent file."""
 import argparse
-import ipaddress
 import json
-import re
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +10,7 @@ import requests
 import yaml
 
 from inventory import API, Client
+from validate import validate
 
 VLANS = "/api/v1/vlans"
 ACL = "/api/v1/acl/entries"
@@ -22,52 +21,6 @@ def acl_fields(entry):
     """Compare the user-controlled fields, with the same defaults as the API."""
     return {"action": entry["action"], "src": entry["src"], "dst": entry["dst"],
             **{k: entry.get(k, default) for k, default in ACL_DEFAULTS.items()}}
-
-
-def load_intent(path):
-    """Load and validate the entire file before allowing any API writes."""
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or not re.fullmatch(r"[0-9]{4}", str(data.get("student_id_last4"))):
-        raise ValueError("student_id_last4 must be four digits")
-    nn = int(str(data["student_id_last4"])[-2:])
-    block = ipaddress.IPv4Network(f"10.{nn}.0.0/16")
-    if not isinstance(data.get("vlans"), list) or not isinstance(data.get("acl"), list):
-        raise ValueError("vlans and acl must both be lists")
-
-    vlans = {}
-    for entry in data["vlans"]:
-        if not isinstance(entry, dict) or set(entry) != {"id", "name"}:
-            raise ValueError("every VLAN needs an id and a name")
-        vid, name = entry["id"], entry["name"]
-        if type(vid) is not int or not 2 <= vid <= 4094 or vid in vlans:
-            raise ValueError("VLAN IDs must be unique integers from 2 to 4094")
-        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", name):
-            raise ValueError(f"invalid VLAN name for VLAN {vid}")
-        vlans[vid] = name
-
-    acl = []
-    required = {"action", "src", "dst"}
-    for entry in data["acl"]:
-        if not isinstance(entry, dict) or not required <= entry.keys() <= required | ACL_DEFAULTS.keys():
-            raise ValueError("ACL rows need action, src and dst, with optional protocol, port and description")
-        rule = acl_fields(entry)
-        if rule["action"] not in ("permit", "deny") or rule["protocol"] not in ("any", "tcp", "udp", "icmp"):
-            raise ValueError("invalid ACL action or protocol")
-        for field in ("src", "dst"):
-            cidr = rule[field]
-            if not isinstance(cidr, str) or "/" not in cidr:
-                raise ValueError(f"ACL {field} must be a network in CIDR notation")
-            network = ipaddress.IPv4Network(cidr)
-            if not network.subnet_of(block):
-                raise ValueError(f"ACL {field} must be within {block}")
-            rule[field] = str(network)
-        port = rule["port"]
-        if port is not None and (rule["protocol"] not in ("tcp", "udp") or type(port) is not int or not 1 <= port <= 65535):
-            raise ValueError("ACL ports must be integers from 1 to 65535 and require tcp or udp")
-        if not isinstance(rule["description"], str) or rule in acl:
-            raise ValueError("ACL rows must be unique and descriptions must be strings")
-        acl.append(rule)
-    return vlans, acl
 
 
 def read_state(client):
@@ -114,9 +67,17 @@ def main():
     parser.add_argument("intent", type=Path)
     parser.add_argument("--dry-run", action="store_true", help="print the plan without resource writes")
     args = parser.parse_args()
-    client = Client()
     try:
-        desired = load_intent(args.intent)
+        intent = yaml.safe_load(args.intent.read_text(encoding="utf-8"))
+        ok, message = validate(args.intent, intent=intent)
+        if not ok:
+            print(f"INVALID: {args.intent}\n{message}", file=sys.stderr)
+            return 1
+        desired = (
+            {entry["id"]: entry["name"] for entry in intent["vlans"]},
+            [acl_fields(entry) for entry in intent["acl"]],
+        )
+        client = Client()
         plan = make_plan(read_state(client), desired)
         show_plan(plan)
         if args.dry_run:
