@@ -1,0 +1,37 @@
+API endpoint: http://api:8000 (isolated Docker network)
+Access log before invalid runs: 0 HTTP requests.
+
+$ python3 sync.py tests/bad-vlan-4095.yaml --dry-run  # credentials set
+INVALID: tests/bad-vlan-4095.yaml
+libyang err : Unsatisfied range - value "4095" is out of the allowed range. (/wic2005-intent:intent/vlans/id) (line 6)
+libyang err : List instance is missing its key "id". (/wic2005-intent:intent/vlans) (line 8)
+libyang err : Too few "vlans" instances. (/wic2005-intent:intent/vlans[id='70'])
+exit=1
+Access log after this run: 0 HTTP requests.
+
+$ env -u LAB_USERNAME -u LAB_PASSWORD python3 sync.py tests/bad-vlan-4095.yaml --dry-run
+INVALID: tests/bad-vlan-4095.yaml
+libyang err : Unsatisfied range - value "4095" is out of the allowed range. (/wic2005-intent:intent/vlans/id) (line 6)
+libyang err : List instance is missing its key "id". (/wic2005-intent:intent/vlans) (line 8)
+libyang err : Too few "vlans" instances. (/wic2005-intent:intent/vlans[id='70'])
+exit=1
+Access log after this run: 0 HTTP requests.
+Both invalid dry runs added 0 HTTP requests, including auth and reads.
+
+$ python3 sync.py intent.yaml --dry-run  # positive control; credentials set
+logged in as netops
+Plan: 11 writes
+  rename VLAN: PUT /api/v1/vlans/10 {"name": "editing-stations"}
+  rename VLAN: PUT /api/v1/vlans/20 {"name": "media-services"}
+  create VLAN: PUT /api/v1/vlans/30 {"name": "workshop-guests"}
+  create VLAN: PUT /api/v1/vlans/44 {"name": "capture-studios"}
+  create VLAN: PUT /api/v1/vlans/53 {"name": "core-dns"}
+  create VLAN: PUT /api/v1/vlans/70 {"name": "equipment-admin"}
+  delete VLAN: DELETE /api/v1/vlans/99
+  append ACL entry: POST /api/v1/acl/entries {"action": "deny", "src": "10.1.30.0/24", "dst": "10.1.70.0/24", "protocol": "any", "port": null, "description": "guests-blocked-from-admin"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.10.0/24", "dst": "10.1.20.0/24", "protocol": "tcp", "port": 443, "description": "editors-to-media-portal"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.44.0/24", "dst": "10.1.53.0/24", "protocol": "udp", "port": 53, "description": "studios-to-dns"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.70.0/24", "dst": "10.1.44.0/24", "protocol": "tcp", "port": 22, "description": "admins-to-capture-hosts"}
+Dry run: no resource writes sent.
+exit=0
+Access log after valid dry run: 3 HTTP requests.

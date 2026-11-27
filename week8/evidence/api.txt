@@ -1,0 +1,49 @@
+logged in as netops
+Fresh API: 3 managed VLANs, reserved VLAN 1, no ACL entries, no audited writes.
+$ /usr/local/bin/python3 sync.py intent.yaml --dry-run
+logged in as netops
+Plan: 11 writes
+  rename VLAN: PUT /api/v1/vlans/10 {"name": "editing-stations"}
+  rename VLAN: PUT /api/v1/vlans/20 {"name": "media-services"}
+  create VLAN: PUT /api/v1/vlans/30 {"name": "workshop-guests"}
+  create VLAN: PUT /api/v1/vlans/44 {"name": "capture-studios"}
+  create VLAN: PUT /api/v1/vlans/53 {"name": "core-dns"}
+  create VLAN: PUT /api/v1/vlans/70 {"name": "equipment-admin"}
+  delete VLAN: DELETE /api/v1/vlans/99
+  append ACL entry: POST /api/v1/acl/entries {"action": "deny", "src": "10.1.30.0/24", "dst": "10.1.70.0/24", "protocol": "any", "port": null, "description": "guests-blocked-from-admin"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.10.0/24", "dst": "10.1.20.0/24", "protocol": "tcp", "port": 443, "description": "editors-to-media-portal"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.44.0/24", "dst": "10.1.53.0/24", "protocol": "udp", "port": 53, "description": "studios-to-dns"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.70.0/24", "dst": "10.1.44.0/24", "protocol": "tcp", "port": 22, "description": "admins-to-capture-hosts"}
+Dry run: no resource writes sent.
+Audit after valid dry run: 0 writes.
+$ /usr/local/bin/python3 sync.py intent.yaml
+logged in as netops
+Plan: 11 writes
+  rename VLAN: PUT /api/v1/vlans/10 {"name": "editing-stations"}
+  rename VLAN: PUT /api/v1/vlans/20 {"name": "media-services"}
+  create VLAN: PUT /api/v1/vlans/30 {"name": "workshop-guests"}
+  create VLAN: PUT /api/v1/vlans/44 {"name": "capture-studios"}
+  create VLAN: PUT /api/v1/vlans/53 {"name": "core-dns"}
+  create VLAN: PUT /api/v1/vlans/70 {"name": "equipment-admin"}
+  delete VLAN: DELETE /api/v1/vlans/99
+  append ACL entry: POST /api/v1/acl/entries {"action": "deny", "src": "10.1.30.0/24", "dst": "10.1.70.0/24", "protocol": "any", "port": null, "description": "guests-blocked-from-admin"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.10.0/24", "dst": "10.1.20.0/24", "protocol": "tcp", "port": 443, "description": "editors-to-media-portal"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.44.0/24", "dst": "10.1.53.0/24", "protocol": "udp", "port": 53, "description": "studios-to-dns"}
+  append ACL entry: POST /api/v1/acl/entries {"action": "permit", "src": "10.1.70.0/24", "dst": "10.1.44.0/24", "protocol": "tcp", "port": 22, "description": "admins-to-capture-hosts"}
+PUT /api/v1/vlans/44: 429; waiting Retry-After 1s
+POST /api/v1/acl/entries: 429; waiting Retry-After 1s
+Verified: state matches intent (6 managed VLANs, 4 ACL entries).
+$ /usr/local/bin/python3 sync.py intent.yaml
+logged in as netops
+Plan: empty (0 writes)
+Verified: state matches intent (6 managed VLANs, 4 ACL entries).
+Confirmed exact VLANs including default VLAN 1 and the four ACL rules in order.
+$ /usr/local/bin/python3 validate.py /tmp/tmp3535wers/host-bits.yaml --emit-json /tmp/tmp3535wers/host-bits.json
+VALID: /tmp/tmp3535wers/host-bits.yaml matches wic2005-intent.yang
+$ yanglint -t config -f json /lab/wic2005-intent.yang /tmp/tmp3535wers/host-bits.json
+Emitted prefix: 10.1.40.5/24. Prefix from yanglint's JSON printer: 10.1.40.0/24.
+$ POST /api/v1/acl/entries {"action": "deny", "src": "10.1.40.5/24", "dst": "10.1.70.0/24", "protocol": "any", "port": null, "description": "guests-blocked-from-admin"}
+HTTP 422 {"error": "src must be a network in CIDR form, such as 10.0.10.0/24"}
+$ PUT /api/v1/vlans/4095 {"name": "out-of-range"}
+HTTP 422 {"error": "id must be a VLAN number from 1 to 4094"}
+Final audit: 11 writes total. Second apply and rejected API probes added 0.

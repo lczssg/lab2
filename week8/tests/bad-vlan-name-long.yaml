@@ -1,0 +1,37 @@
+student_id_last4: '6101'
+vlans:
+- id: 10
+  name: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+- id: 20
+  name: media-services
+- id: 30
+  name: workshop-guests
+- id: 44
+  name: capture-studios
+- id: 53
+  name: core-dns
+- id: 70
+  name: equipment-admin
+acl:
+- action: deny
+  src: 10.1.30.0/24
+  dst: 10.1.70.0/24
+  description: guests-blocked-from-admin
+- action: permit
+  src: 10.1.10.0/24
+  dst: 10.1.20.0/24
+  protocol: tcp
+  port: 443
+  description: editors-to-media-portal
+- action: permit
+  src: 10.1.44.0/24
+  dst: 10.1.53.0/24
+  protocol: udp
+  port: 53
+  description: studios-to-dns
+- action: permit
+  src: 10.1.70.0/24
+  dst: 10.1.44.0/24
+  protocol: tcp
+  port: 22
+  description: admins-to-capture-hosts

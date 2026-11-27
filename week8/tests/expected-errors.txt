@@ -1,0 +1,26 @@
+bad-acl-action.yaml|Invalid enumeration value "drop"
+bad-acl-description-duplicate.yaml|Duplicate instance of "acl"
+bad-acl-description-missing.yaml|List instance is missing its key "description"
+bad-acl-min-count.yaml|Too few "acl" instances
+bad-acl-no-deny.yaml|At least one ACL entry must deny traffic
+bad-acl-no-permit.yaml|At least one ACL entry must permit traffic
+bad-acl-no-port.yaml|At least one ACL entry must specify a port
+bad-acl-port-default-any.yaml|When condition "../protocol = 'tcp' or ../protocol = 'udp'" not satisfied
+bad-acl-port-icmp.yaml|When condition "../protocol = 'tcp' or ../protocol = 'udp'" not satisfied
+bad-acl-port-too-large.yaml|Value "65536" is out of type uint16 min/max bounds
+bad-acl-port-zero.yaml|Unsatisfied range - value "0"
+bad-acl-prefix-ipv6.yaml|Unsatisfied pattern - "fd00:6101::/64"
+bad-acl-prefix-no-length.yaml|Unsatisfied pattern - "10.1.30.1"
+bad-acl-prefix-octet.yaml|Unsatisfied pattern - "10.1.30.300/24"
+bad-acl-prefix-outside.yaml|Use an explicit IPv4 prefix inside 10.1.0.0/16
+bad-acl-prefix-too-wide.yaml|Use an explicit IPv4 prefix inside 10.1.0.0/16
+bad-acl-protocol.yaml|Invalid enumeration value "gre"
+bad-student-suffix.yaml|Unsatisfied pattern - "101"
+bad-vlan-4095.yaml|Unsatisfied range - value "4095"
+bad-vlan-duplicate-id.yaml|Duplicate instance of "vlans"
+bad-vlan-id-1.yaml|Unsatisfied range - value "1"
+bad-vlan-min-count.yaml|Too few "vlans" instances
+bad-vlan-name-character.yaml|Unsatisfied pattern - "editing stations"
+bad-vlan-name-empty.yaml|Unsatisfied length - string ""
+bad-vlan-name-long.yaml|Unsatisfied length - string "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+bad-vlan-name-missing.yaml|Mandatory node "name" instance does not exist
