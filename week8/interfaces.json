@@ -8,7 +8,7 @@
         "enabled": true,
         "ietf-ip:ipv4": {
           "address": [
-            {"ip": "10.7.1.1", "prefix-length": 24}
+            {"ip": "10.1.1.1", "prefix-length": 24}
           ]
         }
       },
@@ -17,7 +17,7 @@
         "type": "iana-if-type:softwareLoopback",
         "ietf-ip:ipv4": {
           "address": [
-            {"ip": "10.7.255.1", "prefix-length": 32}
+            {"ip": "10.1.255.1", "prefix-length": 32}
           ]
         }
       }

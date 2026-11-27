@@ -1,0 +1,78 @@
+module example-wifi {
+  yang-version 1.1;
+  namespace "urn:example:wifi";
+  prefix wf;
+
+  import example-vlans {
+    prefix vl;
+  }
+
+  description
+    "Wi-Fi networks and connected client counts for Teras Hub.";
+
+  revision 2026-11-28 {
+    description
+      "Add an optional configured client limit.";
+  }
+
+  revision 2026-11-27 {
+    description
+      "Initial Wi-Fi model.";
+  }
+
+  container wifi {
+    list network {
+      key "ssid";
+
+      must "security = 'open' or passphrase" {
+        error-message "A secured Wi-Fi network needs a passphrase.";
+      }
+
+      leaf ssid {
+        type string {
+          length "1..32";
+        }
+      }
+      leaf vlan {
+        type leafref {
+          path "/vl:vlans/vl:vlan/vl:id";
+        }
+        mandatory true;
+      }
+      leaf security {
+        type enumeration {
+          enum open;
+          enum wpa2-personal;
+          enum wpa3-personal;
+        }
+        default "wpa3-personal";
+      }
+      leaf passphrase {
+        type string {
+          length "8..63";
+        }
+      }
+      leaf-list bands {
+        type enumeration {
+          enum "2.4";
+          enum "5";
+          enum "6";
+        }
+        min-elements 1;
+      }
+      leaf hidden {
+        type boolean;
+        default "false";
+      }
+      leaf max-clients {
+        type uint16;
+        description
+          "Configured limit for connected clients.";
+      }
+      leaf clients {
+        config false;
+        type uint32;
+      }
+    }
+  }
+}

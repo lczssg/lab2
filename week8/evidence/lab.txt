@@ -1,0 +1,358 @@
+=== Step 0: Tools I ran ===
+
+$ python3 --version
+Python 3.12.16
+exit=0 (expected 0)
+
+$ pyang --version
+pyang 2.7.1
+exit=0 (expected 0)
+
+$ yanglint --version
+yanglint 3.12.2
+exit=0 (expected 0)
+
+IETF module directory: /usr/local/share/yang/modules/ietf
+ietf-access-control-list.yang
+ietf-acldns.yang
+ietf-alarms-x733.yang
+ietf-alarms.yang
+ietf-datastores.yang
+ietf-dslite.yang
+ietf-ethertypes.yang
+ietf-hardware-state.yang
+ietf-hardware.yang
+ietf-i2rs-rib.yang
+ietf-inet-types.yang
+ietf-interfaces.yang
+ietf-ip.yang
+ietf-ipv4-unicast-routing.yang
+ietf-ipv6-router-advertisements.yang
+ietf-ipv6-unicast-routing.yang
+ietf-key-chain.yang
+ietf-l2vpn-svc.yang
+ietf-l3-unicast-topology-state.yang
+ietf-l3-unicast-topology.yang
+ietf-l3vpn-svc.yang
+ietf-lmap-common.yang
+ietf-lmap-control.yang
+ietf-lmap-report.yang
+ietf-logical-network-element.yang
+ietf-mud.yang
+ietf-nat.yang
+ietf-netconf-acm.yang
+ietf-netconf-monitoring.yang
+ietf-netconf-nmda.yang
+ietf-netconf-notifications.yang
+ietf-netconf-with-defaults.yang
+ietf-netconf.yang
+ietf-network-instance.yang
+ietf-network-state.yang
+ietf-network-topology-state.yang
+ietf-network-topology.yang
+ietf-network.yang
+ietf-origin.yang
+ietf-packet-fields.yang
+ietf-restconf-monitoring.yang
+ietf-restconf.yang
+ietf-routing-types.yang
+ietf-routing.yang
+ietf-snmp-common.yang
+ietf-snmp-community.yang
+ietf-snmp-engine.yang
+ietf-snmp-notification.yang
+ietf-snmp-proxy.yang
+ietf-snmp-ssh.yang
+ietf-snmp-target.yang
+ietf-snmp-tls.yang
+ietf-snmp-tsm.yang
+ietf-snmp-usm.yang
+ietf-snmp-vacm.yang
+ietf-snmp.yang
+ietf-subscribed-notifications.yang
+ietf-system.yang
+ietf-voucher.yang
+ietf-vrrp.yang
+ietf-x509-cert-to-name.yang
+ietf-yang-library.yang
+ietf-yang-metadata.yang
+ietf-yang-patch.yang
+ietf-yang-push.yang
+ietf-yang-schema-mount.yang
+ietf-yang-smiv2.yang
+ietf-yang-structure-ext.yang
+ietf-yang-types.yang
+
+=== Step 1: Interface model and base identity ===
+
+$ pyang -f tree /usr/local/share/yang/modules/ietf/ietf-interfaces.yang
+module: ietf-interfaces
+  +--rw interfaces
+  |  +--rw interface* [name]
+  |     +--rw name                        string
+  |     +--rw description?                string
+  |     +--rw type                        identityref
+  |     +--rw enabled?                    boolean
+  |     +--rw link-up-down-trap-enable?   enumeration {if-mib}?
+  |     +--ro admin-status                enumeration {if-mib}?
+  |     +--ro oper-status                 enumeration
+  |     +--ro last-change?                yang:date-and-time
+  |     +--ro if-index                    int32 {if-mib}?
+  |     +--ro phys-address?               yang:phys-address
+  |     +--ro higher-layer-if*            interface-ref
+  |     +--ro lower-layer-if*             interface-ref
+  |     +--ro speed?                      yang:gauge64
+  |     +--ro statistics
+  |        +--ro discontinuity-time    yang:date-and-time
+  |        +--ro in-octets?            yang:counter64
+  |        +--ro in-unicast-pkts?      yang:counter64
+  |        +--ro in-broadcast-pkts?    yang:counter64
+  |        +--ro in-multicast-pkts?    yang:counter64
+  |        +--ro in-discards?          yang:counter32
+  |        +--ro in-errors?            yang:counter32
+  |        +--ro in-unknown-protos?    yang:counter32
+  |        +--ro out-octets?           yang:counter64
+  |        +--ro out-unicast-pkts?     yang:counter64
+  |        +--ro out-broadcast-pkts?   yang:counter64
+  |        +--ro out-multicast-pkts?   yang:counter64
+  |        +--ro out-discards?         yang:counter32
+  |        +--ro out-errors?           yang:counter32
+  x--ro interfaces-state
+     x--ro interface* [name]
+        x--ro name               string
+        x--ro type               identityref
+        x--ro admin-status       enumeration {if-mib}?
+        x--ro oper-status        enumeration
+        x--ro last-change?       yang:date-and-time
+        x--ro if-index           int32 {if-mib}?
+        x--ro phys-address?      yang:phys-address
+        x--ro higher-layer-if*   interface-state-ref
+        x--ro lower-layer-if*    interface-state-ref
+        x--ro speed?             yang:gauge64
+        x--ro statistics
+           x--ro discontinuity-time    yang:date-and-time
+           x--ro in-octets?            yang:counter64
+           x--ro in-unicast-pkts?      yang:counter64
+           x--ro in-broadcast-pkts?    yang:counter64
+           x--ro in-multicast-pkts?    yang:counter64
+           x--ro in-discards?          yang:counter32
+           x--ro in-errors?            yang:counter32
+           x--ro in-unknown-protos?    yang:counter32
+           x--ro out-octets?           yang:counter64
+           x--ro out-unicast-pkts?     yang:counter64
+           x--ro out-broadcast-pkts?   yang:counter64
+           x--ro out-multicast-pkts?   yang:counter64
+           x--ro out-discards?         yang:counter32
+           x--ro out-errors?           yang:counter32
+exit=0 (expected 0)
+
+$ grep -n -A 3 identity ethernetCsmacd /usr/local/share/yang/modules/iana/iana-if-type.yang
+163:  identity ethernetCsmacd {
+164-    base iana-interface-type;
+165-    description
+166-      "For all Ethernet-like interfaces, regardless of speed,
+exit=0 (expected 0)
+
+=== Step 2: IP augmentation ===
+$ pyang -f tree /usr/local/share/yang/modules/ietf/ietf-ip.yang | head
+module: ietf-ip
+
+  augment /if:interfaces/if:interface:
+    +--rw ipv4!
+    |  +--rw enabled?      boolean
+    |  +--rw forwarding?   boolean
+    |  +--rw mtu?          uint16
+    |  +--rw address* [ip]
+    |  |  +--rw ip                     inet:ipv4-address-no-zone
+    |  |  +--rw (subnet)
+
+$ pyang -f tree --tree-path /interfaces/interface/ipv4/address /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang
+module: ietf-interfaces
+  +--rw interfaces
+     +--rw interface* [name]
+        +--rw ip:ipv4!
+           +--rw ip:address* [ip]
+              +--rw ip:ip                     inet:ipv4-address-no-zone
+              +--rw (ip:subnet)
+              |  +--:(ip:prefix-length)
+              |  |  +--rw ip:prefix-length?   uint8
+              |  +--:(ip:netmask)
+              |     +--rw ip:netmask?         yang:dotted-quad {ipv4-non-contiguous-netmasks}?
+              +--ro ip:origin?                ip-address-origin
+
+exit=0 (expected 0)
+
+=== Step 3: Interface data ===
+$ python3 (generate four copies of interfaces.json; change one field per copy)
+
+$ yanglint -t config -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang interfaces.json
+exit=0 (expected 0)
+
+$ yanglint -t config -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang /tmp/tmp.E2P2cKkBnl/prefix-33.json
+libyang err : Unsatisfied range - value "33" is out of the allowed range. (/ietf-interfaces:interfaces/interface[name='eth1']/ietf-ip:ipv4/address[ip='10.1.1.1']/prefix-length) (line 14)
+libyang err : Mandatory choice "subnet" data do not exist. (/ietf-interfaces:interfaces/interface[name='eth1']/ietf-ip:ipv4/address[ip='10.1.1.1'])
+YANGLINT[E]: Failed to parse input data file "/tmp/tmp.E2P2cKkBnl/prefix-33.json".
+exit=1 (expected 1)
+
+$ yanglint -t config -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang /tmp/tmp.E2P2cKkBnl/type-ethernet.json
+libyang err : Invalid identityref "iana-if-type:ethernet" value - identity not found in module "iana-if-type". (/ietf-interfaces:interfaces/interface[name='eth1']/type) (line 7)
+libyang err : Mandatory node "type" instance does not exist. (/ietf-interfaces:interfaces/interface[name='eth1'])
+YANGLINT[E]: Failed to parse input data file "/tmp/tmp.E2P2cKkBnl/type-ethernet.json".
+exit=1 (expected 1)
+
+$ yanglint -t config -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang /tmp/tmp.E2P2cKkBnl/ip-300.json
+libyang err : Failed to convert IPv4 address "10.1.1.300". (/ietf-interfaces:interfaces/interface[name='eth1']/ietf-ip:ipv4/address/ip) (line 12)
+libyang err : List instance is missing its key "ip". (/ietf-interfaces:interfaces/interface[name='eth1']/ietf-ip:ipv4/address) (line 15)
+YANGLINT[E]: Failed to parse input data file "/tmp/tmp.E2P2cKkBnl/ip-300.json".
+exit=1 (expected 1)
+
+$ yanglint -t config -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang /tmp/tmp.E2P2cKkBnl/missing-name.json
+libyang err : List instance is missing its key "name". (/ietf-interfaces:interfaces/interface) (line 29)
+YANGLINT[E]: Failed to parse input data file "/tmp/tmp.E2P2cKkBnl/missing-name.json".
+exit=1 (expected 1)
+
+=== Step 4: VLAN example ===
+
+$ pyang --strict example-vlans.yang
+exit=0 (expected 0)
+
+$ pyang -f tree example-vlans.yang
+module: example-vlans
+  +--rw vlans
+  |  +--rw vlan* [id]
+  |     +--rw id              vlan-id
+  |     +--rw name            string
+  |     +--rw purpose?        enumeration
+  |     +--rw qos-priority?   uint8
+  |     +--ro member-count?   uint32
+  +--rw ports
+     +--rw port* [name]
+        +--rw name           string
+        +--rw enabled?       boolean
+        +--rw access-vlan?   -> /vlans/vlan/id
+        +--rw trunk-vlans*   vlan-id
+        +--ro oper-status?   enumeration
+exit=0 (expected 0)
+
+$ yanglint -t config example-vlans.yang vlans-good.json
+exit=0 (expected 0)
+
+$ yanglint -t config example-vlans.yang vlans-bad-name.json
+libyang err : Unsatisfied pattern - "Guest WiFi" does not conform to "[a-z][a-z0-9-]*". (/example-vlans:vlans/vlan[id='30']/name) (line 17)
+libyang err : Mandatory node "name" instance does not exist. (/example-vlans:vlans/vlan[id='30'])
+YANGLINT[E]: Failed to parse input data file "vlans-bad-name.json".
+exit=1 (expected 1)
+
+$ yanglint -t config example-vlans.yang vlans-bad-port.json
+libyang err : Invalid leafref value "30" - no target instance "/vl:vlans/vl:vlan/vl:id" with the same value. (/example-vlans:ports/port[name='eth1']/access-vlan)
+YANGLINT[E]: Failed to parse input data file "vlans-bad-port.json".
+exit=1 (expected 1)
+
+$ yanglint -t config example-vlans.yang vlans-bad-range.json
+libyang err : Unsatisfied range - value "5000" is out of the allowed range. (/example-vlans:vlans/vlan/id) (line 15)
+libyang err : List instance is missing its key "id". (/example-vlans:vlans/vlan) (line 18)
+YANGLINT[E]: Failed to parse input data file "vlans-bad-range.json".
+exit=1 (expected 1)
+
+$ yanglint -t config example-vlans.yang vlans-bad-voice.json
+libyang err : A voice VLAN needs a qos-priority. (/example-vlans:vlans/vlan[id='20'])
+YANGLINT[E]: Failed to parse input data file "vlans-bad-voice.json".
+exit=1 (expected 1)
+
+=== Step 5: Wi-Fi initial model and data ===
+
+$ pyang --strict -p . /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang
+exit=0 (expected 0)
+
+$ pyang -f tree -p . /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang
+module: example-wifi
+  +--rw wifi
+     +--rw network* [ssid]
+        +--rw ssid          string
+        +--rw vlan          -> /vl:vlans/vlan/id
+        +--rw security?     enumeration
+        +--rw passphrase?   string
+        +--rw bands*        enumeration
+        +--rw hidden?       boolean
+        +--ro clients?      uint32
+exit=0 (expected 0)
+
+$ yanglint -p . -t config /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang wifi-good.json
+exit=0 (expected 0)
+
+$ yanglint -p . -t config /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang wifi-bad-1.json
+libyang err : A secured Wi-Fi network needs a passphrase. (/example-wifi:wifi/network[ssid='Staff'])
+YANGLINT[E]: Failed to parse input data file "wifi-bad-1.json".
+exit=1 (expected 1)
+
+$ yanglint -p . -t config /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang wifi-bad-2.json
+libyang err : Invalid leafref value "999" - no target instance "/vl:vlans/vl:vlan/vl:id" with the same value. (/example-wifi:wifi/network[ssid='Staff']/vlan)
+YANGLINT[E]: Failed to parse input data file "wifi-bad-2.json".
+exit=1 (expected 1)
+
+=== Step 6: Configuration and operational data ===
+
+$ yanglint -t config example-vlans.yang vlans-state.json
+libyang err : Unexpected data state node "member-count" found. (/example-vlans:vlans/vlan[id='10']/member-count) (line 7)
+libyang err : Unexpected data state node "oper-status" found. (/example-vlans:ports/port[name='eth1']/oper-status) (line 22)
+YANGLINT[E]: Failed to parse input data file "vlans-state.json".
+exit=1 (expected 1)
+
+$ yanglint example-vlans.yang vlans-state.json
+exit=0 (expected 0)
+
+$ yanglint -p /usr/local/share/yang/modules /usr/local/share/yang/modules/ietf/ietf-interfaces.yang /usr/local/share/yang/modules/ietf/ietf-ip.yang /usr/local/share/yang/modules/iana/iana-if-type.yang interfaces.json
+libyang err : Mandatory node "admin-status" instance does not exist. (/ietf-interfaces:interfaces/interface[name='eth1'])
+libyang err : Mandatory node "oper-status" instance does not exist. (/ietf-interfaces:interfaces/interface[name='eth1'])
+libyang err : Mandatory node "if-index" instance does not exist. (/ietf-interfaces:interfaces/interface[name='eth1'])
+libyang err : Mandatory node "discontinuity-time" instance does not exist. (/ietf-interfaces:interfaces/interface[name='eth1']/statistics)
+libyang err : Mandatory node "admin-status" instance does not exist. (/ietf-interfaces:interfaces/interface[name='lo0'])
+libyang err : Mandatory node "oper-status" instance does not exist. (/ietf-interfaces:interfaces/interface[name='lo0'])
+libyang err : Mandatory node "if-index" instance does not exist. (/ietf-interfaces:interfaces/interface[name='lo0'])
+libyang err : Mandatory node "discontinuity-time" instance does not exist. (/ietf-interfaces:interfaces/interface[name='lo0']/statistics)
+YANGLINT[E]: Failed to parse input data file "interfaces.json".
+exit=1 (expected 1)
+
+$ yanglint -t config example-wifi.yang wifi-clients.json
+libyang err : Unexpected data state node "clients" found. (/example-wifi:wifi/network[ssid='Staff']/clients) (line 33)
+YANGLINT[E]: Failed to parse input data file "wifi-clients.json".
+exit=1 (expected 1)
+
+$ yanglint example-wifi.yang wifi-clients.json
+exit=0 (expected 0)
+
+=== Step 7: Wi-Fi revision check ===
+
+$ pyang --strict example-wifi.yang
+exit=0 (expected 0)
+
+$ pyang -P . --check-update-from old/example-wifi.yang example-wifi.yang
+exit=0 (expected 0)
+
+Mutation: mandatory-passphrase
+
+$ pyang -p . -P . --check-update-from old/example-wifi.yang /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang
+/tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang:51: error: the mandatory 'true' is illegally added
+exit=1 (expected 1)
+
+Mutation: remove-hidden
+
+$ pyang -p . -P . --check-update-from old/example-wifi.yang /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang
+/tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang:24: error: the leaf 'hidden', defined at old/example-wifi.yang:58 is illegally removed
+exit=1 (expected 1)
+
+Mutation: narrow-passphrase
+
+$ pyang -p . -P . --check-update-from old/example-wifi.yang /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang
+exit=0 (expected 0)
+
+Test old data against both lengths (passphrase is abcdefgh)
+
+$ yanglint -p . -t config old/example-wifi.yang /tmp/tmp.E2P2cKkBnl/wifi-short-passphrase.json
+exit=0 (expected 0)
+
+$ yanglint -p . -t config /tmp/tmp.E2P2cKkBnl/wifi/example-wifi.yang /tmp/tmp.E2P2cKkBnl/wifi-short-passphrase.json
+libyang err : Unsatisfied length - string "abcdefgh" length is not allowed. (/example-wifi:wifi/network[ssid='Staff']/passphrase) (line 19)
+libyang err : A secured Wi-Fi network needs a passphrase. (/example-wifi:wifi/network[ssid='Staff'])
+YANGLINT[E]: Failed to parse input data file "/tmp/tmp.E2P2cKkBnl/wifi-short-passphrase.json".
+exit=1 (expected 1)
